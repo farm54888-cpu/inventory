@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>倉庫資材庫存系統 / Warehouse Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#1a56db;--primary-dark:#1e429f;--primary-light:#e8f0fe;
+  --success:#057a55;--success-light:#def7ec;
+  --warning:#c27803;--warning-light:#fdf6b2;
+  --danger:#c81e1e;--danger-light:#fde8e8;
+  --bg:#f0f4f8;--card:#fff;--text:#111928;--sub:#6b7280;
+  --border:#e5e7eb;--sh:0 2px 8px rgba(0,0,0,.07),0 4px 18px rgba(0,0,0,.05);--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Header */
+header{background:linear-gradient(135deg,#1a56db,#1e3a8a);color:#fff;padding:0 18px;display:flex;align-items:center;justify-content:space-between;height:60px;box-shadow:0 2px 12px rgba(26,86,219,.3);position:sticky;top:0;z-index:100;}
+.hbrand{display:flex;align-items:center;gap:10px;}
+.hlogo{width:34px;height:34px;background:rgba(255,255,255,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.htitle{font-size:15px;font-weight:700;line-height:1.2;}
+.hsub{font-size:10px;opacity:.7;}
+.hright{display:flex;align-items:center;gap:10px;}
+.htimebox{text-align:right;}
+.hdate{font-size:10px;opacity:.65;}
+.htime{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.5px;}
+.sync-pill{font-size:11px;background:rgba(255,255,255,.14);border-radius:20px;padding:3px 9px;display:flex;align-items:center;gap:4px;}
+.sdot{width:7px;height:7px;border-radius:50%;background:#4ade80;flex-shrink:0;}
+.sdot.sy{background:#fbbf24;animation:bk .7s infinite;}
+.sdot.er{background:#f87171;}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.15}}
+.abadge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;display:none;align-items:center;gap:4px;}
+.abadge.on{display:flex;}
+.lout-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;}
+.lout-btn:hover{background:rgba(255,255,255,.22);}
+
+/* Setup banner */
+.setup-banner{background:linear-gradient(90deg,#92400e,#b45309);color:#fff;padding:9px 18px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;flex-wrap:wrap;}
+.setup-banner.hidden{display:none;}
+.setup-btn-inline{background:#fde68a;color:#92400e;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* Tabs */
+.tab-bar{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 18px;overflow-x:auto;}
+.tab-btn{padding:11px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--sub);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .18s;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-btn:hover:not(.active){color:var(--text);background:var(--bg);}
+
+/* Pages */
+.page{display:none;padding:18px;max-width:1100px;margin:0 auto;}
+.page.active{display:block;}
+
+/* Loading */
+.loading-ov{position:fixed;inset:0;background:rgba(255,255,255,.87);backdrop-filter:blur(4px);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;transition:opacity .3s;}
+.loading-ov.hidden{opacity:0;pointer-events:none;}
+.spinner{width:42px;height:42px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .75s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;font-weight:600;color:var(--sub);}
+
+/* Login */
+.lwall{display:none;position:fixed;inset:0;background:rgba(15,23,42,.74);backdrop-filter:blur(5px);z-index:600;align-items:center;justify-content:center;}
+.lwall.open{display:flex;}
+.lbox{background:#fff;border-radius:20px;padding:30px 26px;width:92%;max-width:360px;box-shadow:0 24px 80px rgba(0,0,0,.27);animation:pop .22s ease;}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.lhdr{text-align:center;margin-bottom:22px;}
+.lico{font-size:46px;margin-bottom:9px;}
+.ltit{font-size:19px;font-weight:700;}
+.lsub{font-size:12px;color:var(--sub);margin-top:3px;}
+.lf{margin-bottom:13px;}
+.ll{font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;}
+.li{width:100%;padding:11px 13px;font-size:14px;border:2px solid var(--border);border-radius:9px;outline:none;font-family:inherit;transition:border-color .2s;}
+.li:focus{border-color:var(--primary);}
+.lerr{background:var(--danger-light);color:var(--danger);padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;margin-bottom:11px;display:none;}
+.lerr.show{display:block;}
+.lbtn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.lbtn:hover{background:var(--primary-dark);}
+.lcancel{width:100%;padding:7px;background:none;color:var(--sub);border:none;font-size:12px;cursor:pointer;font-family:inherit;margin-top:5px;text-decoration:underline;}
+
+/* Welcome */
+.welcome{background:linear-gradient(135deg,#1a56db,#2563eb);color:#fff;border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:13px;}
+.wico{font-size:36px;}
+.wtxt h2{font-size:17px;font-weight:700;}
+.wtxt p{font-size:11px;opacity:.85;margin-top:3px;}
+
+/* Action cards */
+.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.ac{background:var(--card);border-radius:var(--r);padding:16px 12px;box-shadow:var(--sh);cursor:pointer;border:2px solid transparent;transition:all .18s;text-align:center;}
+.ac:hover{border-color:var(--primary);transform:translateY(-2px);}
+.ac.take{border-top:4px solid #f59e0b;}
+.ac.return{border-top:4px solid var(--success);}
+.ac.hist{border-top:4px solid var(--primary);}
+.ac-ico{font-size:40px;margin-bottom:7px;}
+.ac-zh{font-size:17px;font-weight:700;}
+.ac-en{font-size:11px;color:var(--sub);margin-top:2px;}
+
+/* Section card */
+.sc{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden;}
+.sc-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.sc-hdr h3{font-size:13px;font-weight:700;}
+.sc-body{padding:14px 16px;}
+
+/* Item photo grid */
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:13px;}
+.item-card{border:2px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff;position:relative;}
+.item-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 6px 18px rgba(26,86,219,.13);}
+.item-card.low{border-color:#f59e0b;}
+.item-card.out{opacity:.55;pointer-events:none;border-color:var(--danger);}
+.iph{width:100%;height:108px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.iph img{width:100%;height:100%;object-fit:cover;}
+.iph-placeholder{font-size:44px;}
+.iinfo{padding:9px 10px 11px;}
+.iname-zh{font-size:13px;font-weight:700;line-height:1.3;}
+.iname-en{font-size:10px;color:var(--sub);margin-top:2px;}
+.ibadge{display:inline-block;margin-top:5px;font-size:10px;padding:2px 7px;border-radius:20px;}
+.bok{background:var(--success-light);color:var(--success);}
+.blow{background:var(--warning-light);color:var(--warning);}
+.bout{background:var(--danger-light);color:var(--danger);}
+.out-tag{position:absolute;top:7px;right:7px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;}
+
+/* Buttons */
+.btn{padding:9px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .14s;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover{background:var(--primary-dark);}
+.btn-success{background:var(--success);color:#fff;}.btn-success:hover{background:#046c4e;}
+.btn-warning{background:#f59e0b;color:#fff;}.btn-warning:hover{background:#d97706;}
+.btn-danger{background:var(--danger);color:#fff;}.btn-danger:hover{background:#a02222;}
+.btn-ghost{background:var(--bg);color:var(--text);border:1px solid var(--border);}.btn-ghost:hover{background:var(--border);}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px;}
+
+/* Search */
+.srchwrap{position:relative;margin-bottom:13px;}
+.srchwrap input{width:100%;padding:10px 14px 10px 38px;font-size:14px;border:2px solid var(--border);border-radius:9px;outline:none;font-family:inherit;transition:border-color .2s;}
+.srchwrap input:focus{border-color:var(--primary);}
+.srch-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.35;}
+
+/* Modal */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:400;opacity:0;pointer-events:none;transition:opacity .18s;}
+.mov.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:18px;padding:24px;width:94%;max-width:460px;box-shadow:0 22px 65px rgba(0,0,0,.2);transform:translateY(16px);transition:transform .18s;max-height:92vh;overflow-y:auto;}
+.mov.open .modal{transform:translateY(0);}
+.mhdr{display:flex;align-items:center;gap:11px;margin-bottom:16px;}
+.mico{font-size:32px;}
+.mhdr h2{font-size:17px;font-weight:700;}
+.msub{font-size:11px;color:var(--sub);}
+.mf{margin-bottom:13px;}
+.ml{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:5px;display:flex;align-items:center;gap:4px;}
+.ml .req{color:var(--danger);}
+.mi{width:100%;padding:10px 13px;font-size:14px;border:2px solid var(--border);border-radius:8px;outline:none;font-family:inherit;transition:border-color .2s;background:#fff;}
+.mi:focus{border-color:var(--primary);}
+.mi:disabled{background:var(--primary-light);color:var(--primary);font-weight:600;font-size:13px;}
+
+/* Auto-time display */
+.time-display{background:var(--primary-light);border:2px solid var(--primary);border-radius:8px;padding:10px 14px;font-size:15px;font-weight:700;color:var(--primary);text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.5px;}
+
+/* Staff chips */
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:7px;}
+.staff-chip{border:2px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;transition:all .15s;}
+.staff-chip:hover{border-color:var(--primary);background:var(--primary-light);}
+.staff-chip.sel{border-color:var(--primary);background:var(--primary-light);color:var(--primary);}
+.sc-ico{font-size:22px;margin-bottom:3px;}
+.sc-name{font-size:11px;font-weight:600;line-height:1.2;}
+.sc-dept{font-size:9px;color:var(--sub);margin-top:1px;}
+
+/* Item chips in modal */
+.item-chip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:7px;max-height:200px;overflow-y:auto;border:2px solid var(--border);border-radius:9px;padding:7px;}
+.item-chip{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .15s;background:#fff;}
+.item-chip:hover{border-color:var(--primary);}
+.item-chip.sel{border-color:var(--primary);background:var(--primary-light);}
+.item-chip.dis{opacity:.4;pointer-events:none;}
+.ic-photo{height:56px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;}
+.ic-photo img{width:100%;height:100%;object-fit:cover;}
+.ic-info{padding:4px 6px 5px;}
+.ic-name{font-size:10px;font-weight:700;line-height:1.2;}
+.ic-stock{font-size:9px;color:var(--sub);margin-top:1px;}
+
+/* Qty */
+.qty-row{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:9px;padding:7px;justify-content:space-between;}
+.qty-btn{width:40px;height:40px;border:none;border-radius:7px;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn.m{background:var(--danger-light);color:var(--danger);}
+.qty-btn.p{background:var(--success-light);color:var(--success);}
+.qty-num{font-size:28px;font-weight:700;min-width:52px;text-align:center;}
+.mactions{display:flex;gap:8px;margin-top:16px;}
+.mactions .btn{flex:1;justify-content:center;padding:12px;font-size:14px;}
+
+/* Selected item info */
+.sel-item-bar{background:var(--primary-light);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px;display:none;}
+.sel-item-bar.show{display:flex;align-items:center;gap:8px;}
+.sel-item-photo{width:32px;height:32px;border-radius:6px;object-fit:cover;background:#dde6f8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
+.sel-item-photo img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+
+/* Receipt */
+.receipt-card{border:2px dashed var(--border);border-radius:11px;padding:16px;background:#fafafa;margin-bottom:13px;}
+.receipt-title{font-size:14px;font-weight:700;text-align:center;margin-bottom:13px;color:var(--primary);}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.rrow:last-child{border-bottom:none;}
+.rk{color:var(--sub);font-size:11px;}
+.rv{font-weight:600;text-align:right;}
+.rv-big{font-size:19px;font-weight:700;}
+.r-take{color:#c27803;}
+.r-return{color:var(--success);}
+.receipt-item-row{display:flex;align-items:center;gap:7px;}
+.rph{width:32px;height:32px;border-radius:5px;object-fit:cover;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
+.rph img{width:32px;height:32px;object-fit:cover;border-radius:5px;}
+
+/* History */
+.hentry{border:1.5px solid var(--border);border-radius:9px;padding:11px;margin-bottom:7px;background:#fafafa;}
+.hname-inp{width:100%;padding:10px 13px;border:2px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-bottom:11px;}
+.hname-inp:focus{border-color:var(--primary);}
+.empty{text-align:center;padding:26px;color:var(--sub);}
+
+/* Photo upload */
+.photo-drop{border:2px dashed var(--border);border-radius:10px;padding:0;text-align:center;cursor:pointer;transition:all .18s;overflow:hidden;position:relative;min-height:110px;display:flex;align-items:center;justify-content:center;}
+.photo-drop:hover{border-color:var(--primary);background:var(--primary-light);}
+.photo-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.ph-preview{width:100%;height:110px;object-fit:cover;display:block;}
+.ph-placeholder{padding:16px;}
+.ph-ico{font-size:30px;margin-bottom:5px;}
+.ph-txt{font-size:11px;color:var(--sub);}
+.ph-change{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:5px;padding:2px 7px;}
+
+/* Admin */
+.admin-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:9px;}
+.admin-title{font-size:19px;font-weight:700;}
+.admin-ctrls{display:flex;gap:7px;flex-wrap:wrap;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat{background:var(--card);border-radius:var(--r);padding:13px 16px;box-shadow:var(--sh);border-left:4px solid;}
+.stat.bl{border-color:var(--primary);}
+.stat.gr{border-color:var(--success);}
+.stat.ye{border-color:#f59e0b;}
+.stat.re{border-color:var(--danger);}
+.stat-n{font-size:24px;font-weight:700;margin-bottom:2px;}
+.stat-l{font-size:10px;color:var(--sub);font-weight:500;}
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--bg);}
+th{padding:9px 12px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);border-bottom:2px solid var(--border);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:hover td{background:#fafcff;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.b-ok{background:var(--success-light);color:var(--success);}
+.b-low{background:var(--warning-light);color:var(--warning);}
+.b-out{background:var(--danger-light);color:var(--danger);}
+.b-cat{background:var(--primary-light);color:var(--primary);}
+.b-off{background:#f1f5f9;color:#94a3b8;}
+.l-take{color:#c27803;font-weight:600;}
+.l-ret{color:var(--success);font-weight:600;}
+.l-adj{color:var(--primary);font-weight:600;}
+.edit-inp{width:62px;padding:4px 6px;font-size:12px;border:2px solid var(--primary);border-radius:5px;outline:none;font-family:inherit;text-align:center;}
+.fr{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.fsel{padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;font-family:inherit;background:#fff;outline:none;cursor:pointer;}
+.finp{padding:6px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;font-family:inherit;outline:none;flex:1;min-width:120px;}
+.finp:focus,.fsel:focus{border-color:var(--primary);}
+.tbl-ph{width:36px;height:36px;border-radius:6px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;}
+.tbl-ph img{width:36px;height:36px;object-fit:cover;border-radius:6px;}
+
+/* Staff manager */
+.staff-row{display:flex;align-items:center;justify-content:space-between;padding:7px 5px;border-bottom:1px solid var(--border);}
+.staff-row:last-child{border-bottom:none;}
+
+/* Toast */
+.tc{position:fixed;top:68px;right:14px;z-index:800;display:flex;flex-direction:column;gap:6px;}
+.toast{background:var(--text);color:#fff;padding:10px 16px;border-radius:9px;font-size:12px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.18);animation:sli .28s ease,fad .28s ease 2.7s forwards;max-width:280px;}
+.toast.ok{background:var(--success);}
+.toast.er{background:var(--danger);}
+@keyframes sli{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fad{to{opacity:0;transform:translateX(14px)}}
+
+@media(max-width:580px){
+  /* 整體版面 */
+  .page{padding:10px;}
+
+  /* Header */
+  .hdr{padding:0 12px;}
+  .htitle{font-size:13px;}
+  .hright{gap:6px;}
+  .htimebox{display:none;}
+  .sync-pill span{display:none;}
+  .abadge{font-size:11px;}
+  .lout-btn{font-size:11px;padding:4px 8px;}
+
+  /* 語言按鈕 */
+  #lang-zh,#lang-en,#lang-vi{padding:2px 6px;font-size:10px;}
+
+  /* Tab */
+  .tabs{gap:4px;}
+  .tab{padding:7px 10px;font-size:12px;}
+
+  /* Welcome */
+  .welcome{padding:12px 14px;gap:10px;}
+  .wico{font-size:28px;}
+  .wtxt h2{font-size:15px;}
+  .wtxt p{font-size:10px;}
+
+  /* Action grid — 2欄 */
+  .action-grid{grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+  .ac{padding:14px 8px;}
+  .ac-ico{font-size:32px;margin-bottom:5px;}
+  .ac-zh{font-size:14px;}
+  .ac-en{font-size:10px;}
+
+  /* 品項卡片 — 較小 */
+  .item-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:9px;}
+  .iph{height:88px;}
+  .iph-placeholder{font-size:36px;}
+  .iinfo{padding:7px 8px 9px;}
+  .iname-zh{font-size:12px;}
+  .iname-en{font-size:9px;}
+  .ibadge{font-size:9px;}
+
+  /* Modal — 全螢幕底部彈出 */
+  .mov{align-items:flex-end;}
+  .modal{
+    width:100%;
+    max-width:100%;
+    border-radius:20px 20px 0 0;
+    padding:20px 16px;
+    max-height:88vh;
+  }
+
+  /* Staff chips — 較小 */
+  .staff-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;}
+  .staff-chip{padding:7px 4px;}
+  .sc-ico{font-size:20px;}
+  .sc-name{font-size:10px;}
+
+  /* Item chips in modal */
+  .item-chip-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}
+  .ic-photo{height:50px;font-size:22px;}
+
+  /* Qty */
+  .qty-btn{width:44px;height:44px;font-size:22px;}
+  .qty-num{font-size:24px;}
+
+  /* 行政統計 — 2欄 */
+  .stats-row{grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+  .stat{padding:10px 12px;}
+  .stat-n{font-size:20px;}
+
+  /* 行政控制按鈕 — 換行顯示 */
+  .admin-ctrls{gap:5px;}
+  .admin-ctrls .btn{font-size:11px;padding:6px 9px;}
+
+  /* 表格 — 手機上水平滾動 */
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{min-width:600px;}
+
+  /* Toast 位置 */
+  .tc{top:auto;bottom:14px;right:8px;left:8px;}
+  .toast{max-width:100%;text-align:center;}
+
+  /* 確認視窗按鈕 */
+  .mactions{flex-direction:column;gap:6px;}
+  .mactions .btn{font-size:14px;padding:13px;}
+
+  /* 搜尋欄 */
+  .srchwrap input{font-size:13px;padding:9px 12px 9px 34px;}
+}
+
+/* 平板（580px ~ 768px）*/
+@media(min-width:581px) and (max-width:768px){
+  .page{padding:14px;}
+  .action-grid{grid-template-columns:repeat(3,1fr);gap:10px;}
+  .item-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
+  .stats-row{grid-template-columns:repeat(4,1fr);}
+  .modal{max-width:520px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Setup Banner -->
+<div class="setup-banner" id="setupBanner">
+  ⚠️ 尚未連接 Google Sheets / Not connected
+  <button class="setup-btn-inline" onclick="openSetupModal()">⚙️ 設定連接</button>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="hbrand">
+    <div class="hlogo">📦</div>
+    <div><div class="htitle">倉庫資材庫存系統</div><div class="hsub">Warehouse Inventory Management</div></div>
+  </div>
+  <div class="hright">
+    <div class="sync-pill" id="syncPill"><div class="sdot er" id="sdot"></div><span id="stxt">未連接</span></div>
+    <!-- 語言切換 -->
+    <div style="display:flex;gap:3px;background:rgba(255,255,255,.15);border-radius:20px;padding:3px;">
+      <button onclick="setLang('zh')" id="lang-zh" style="border:none;background:rgba(255,255,255,.9);color:#1a56db;border-radius:15px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer">中</button>
+      <button onclick="setLang('en')" id="lang-en" style="border:none;background:transparent;color:rgba(255,255,255,.8);border-radius:15px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer">EN</button>
+      <button onclick="setLang('vi')" id="lang-vi" style="border:none;background:transparent;color:rgba(255,255,255,.8);border-radius:15px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer">VI</button>
+    </div>
+    <div class="abadge" id="abadge">🔓 <span id="aname"></span></div>
+    <button class="lout-btn" id="loutBtn" style="display:none" onclick="adminLogout()">登出</button>
+    <div class="htimebox"><div class="hdate" id="hdate"></div><div class="htime" id="htime"></div></div>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('staff')" id="tab-staff">👷 操作員 / Staff</button>
+  <button class="tab-btn" onclick="switchTab('admin')" id="tab-admin">📊 行政核對 / Admin <span id="lockIco">🔒</span></button>
+</div>
+
+<div class="tc" id="tc"></div>
+
+<!-- Loading -->
+<div class="loading-ov" id="loadOv">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loadTxt">載入中...</div>
+</div>
+
+<!-- ══════════════════════════════════
+     STAFF PAGE
+══════════════════════════════════ -->
+<div class="page active" id="page-staff">
+  <div class="welcome">
+    <div class="wico">👋</div>
+    <div class="wtxt">
+      <h2>歡迎！請選擇操作 / Welcome!</h2>
+      <p>點選下方按鈕開始領取或歸還資材 · Tap below to take or return materials</p>
+    </div>
+  </div>
+
+  <div class="action-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="ac take" onclick="openActionMov('take')"><div class="ac-ico">📤</div><div class="ac-zh">領取資材</div><div class="ac-en">TAKE</div></div>
+    <div class="ac" style="border-top:4px solid #f59e0b" onclick="openBatchTakeMov()"><div class="ac-ico">📤📤</div><div class="ac-zh">批次領取</div><div class="ac-en">BATCH</div></div>
+    <div class="ac hist" onclick="openHistMov()"><div class="ac-ico">📋</div><div class="ac-zh">查看記錄</div><div class="ac-en">History</div></div>
+  </div>
+
+  <div class="sc">
+    <div class="sc-hdr">
+      <span style="font-size:17px">📦</span>
+      <h3>所有資材 / All Items</h3>
+      <span id="itemCount" style="font-size:11px;color:var(--sub)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="loadItems()" style="margin-left:auto">🔄</button>
+    </div>
+    <div class="sc-body">
+      <div class="srchwrap">
+        <span class="srch-ico">🔍</span>
+        <input type="text" id="staffSearch" placeholder="搜尋資材 / Search items..." oninput="renderStaffGrid()">
+      </div>
+      <div class="item-grid" id="staffGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     ADMIN PAGE
+══════════════════════════════════ -->
+<div class="page" id="page-admin">
+  <div class="admin-hdr">
+    <div class="admin-title">📊 行政核對 / Admin</div>
+    <div class="admin-ctrls">
+      <button class="btn btn-ghost btn-sm" onclick="loadAll()">🔄 重新整理</button>
+      <button class="btn btn-primary btn-sm" onclick="openAddItemMov()">＋ 新增品項</button>
+      <button class="btn btn-success btn-sm" onclick="openRestockMov()">📦 進貨入庫</button>
+      <button class="btn btn-ghost btn-sm" onclick="openStaffMgr()">👤 管理人員</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat bl"><div class="stat-n" id="sTotal">0</div><div class="stat-l">品項總數</div></div>
+    <div class="stat gr"><div class="stat-n" id="sOk">0</div><div class="stat-l">庫存正常</div></div>
+    <div class="stat ye"><div class="stat-n" id="sLow">0</div><div class="stat-l">庫存偏低</div></div>
+    <div class="stat re"><div class="stat-n" id="sOut">0</div><div class="stat-l">缺貨</div></div>
+  </div>
+
+  <div class="sc" style="margin-bottom:16px">
+    <div class="sc-hdr"><span style="font-size:17px">📋</span><h3>庫存總覽 / Inventory</h3></div>
+    <div class="sc-body">
+      <div class="fr">
+        <input class="finp" id="aSearch" type="text" placeholder="搜尋品項..." oninput="renderAdminTbl()">
+        <select class="fsel" id="aFilter" onchange="renderAdminTbl()">
+          <option value="all">全部</option><option value="ok">正常</option><option value="low">偏低</option><option value="out">缺貨</option><option value="inactive">⏸ 停用中</option>
+        </select>
+      </div>
+      <div class="tw">
+        <table><thead><tr><th>相片</th><th>品號</th><th>中文名稱</th><th>English</th><th>類別</th><th>庫存</th><th>警戒</th><th>箱入數</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="adminTbl"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div class="sc-hdr"><span style="font-size:17px">📝</span><h3>異動記錄 / Log</h3><span id="logCount" style="font-size:11px;color:var(--sub)"></span></div>
+    <div class="sc-body">
+      <div class="fr">
+        <select class="fsel" id="logFilter" onchange="renderLog()">
+          <option value="all">全部</option><option value="take">領取</option><option value="adjust">調整</option><option value="restock">📦 進貨</option>
+        </select>
+        <input class="finp" id="logSearch" type="text" placeholder="搜尋..." oninput="renderLog()" style="max-width:170px">
+      </div>
+      <div class="tw">
+        <table><thead><tr><th>時間</th><th>操作員</th><th>品項</th><th>動作</th><th>數量</th><th>備注</th></tr></thead>
+        <tbody id="logTbl"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     MODALS
+══════════════════════════════════ -->
+
+<!-- Setup -->
+<div class="mov" id="setupMov">
+  <div class="modal">
+    <div class="mhdr"><div class="mico">🔗</div><div><h2 id="setupMovTitle">設定 Google Sheets</h2><div class="msub">Connect to Google Sheets</div></div></div>
+    <div id="currentUrlBar" style="display:none;background:var(--success-light,#def7ec);border:1px solid #057a55;border-radius:9px;padding:10px 13px;margin-bottom:13px;font-size:12px;">
+      <div style="font-weight:700;color:#057a55;margin-bottom:3px">✅ 目前連接的網址 / Current URL</div>
+      <div id="currentUrlText" style="color:#065f46;word-break:break-all;font-family:monospace;font-size:11px"></div>
+    </div>
+    <div class="mf">
+      <label class="ml">新的 Apps Script 網址 / New URL</label>
+      <input class="mi" id="scriptUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec">
+      <div style="font-size:11px;color:var(--sub);margin-top:5px">結尾必須是 <code>/exec</code>，不是 <code>/dev</code></div>
+    </div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeMov('setupMov')">取消</button>
+      <button class="btn btn-primary" onclick="saveUrl()">💾 儲存並連接</button>
+    </div>
+  </div>
+</div>
+
+<!-- Action (Take/Return) -->
+<div class="mov" id="actionMov">
+  <div class="modal">
+    <div class="mhdr"><div class="mico" id="aIco">📤</div><div><h2 id="aTit">領取資材</h2><div class="msub" id="aSub"></div></div></div>
+
+    <!-- Auto timestamp -->
+    <div class="mf">
+      <label class="ml">🕐 時間（自動）/ Time (auto)</label>
+      <div class="time-display" id="actionTimeLive">—</div>
+    </div>
+
+    <!-- Staff select from Sheets -->
+    <div class="mf">
+      <label class="ml">👤 操作員 / Staff <span class="req">*</span></label>
+      <div id="staffLoading" style="font-size:12px;color:var(--sub);padding:8px 0">載入人員清單中...</div>
+      <div class="staff-grid" id="staffChipGrid" style="display:none"></div>
+    </div>
+
+    <!-- Item select -->
+    <div class="mf">
+      <label class="ml">📦 選擇品項 / Item <span class="req">*</span></label>
+      <div class="item-chip-grid" id="itemChipGrid"></div>
+    </div>
+
+    <!-- Selected item info bar -->
+    <div class="sel-item-bar" id="selBar">
+      <div class="sel-item-photo" id="selBarPhoto"></div>
+      <div><strong id="selBarName"></strong><div style="font-size:10px;color:var(--sub)">庫存 Stock: <strong id="selBarStock"></strong> 件</div></div>
+    </div>
+
+    <!-- Qty -->
+    <div class="mf">
+      <label class="ml">數量 / Quantity</label>
+      <div class="qty-row">
+        <button class="qty-btn m" onclick="chgQty(-1)">−</button>
+        <input class="qty-num" id="qtyNum" type="number" value="1" min="1"
+          onfocus="this.select()" oninput="syncQtyInput(this)"
+          style="border:2px solid var(--primary);border-radius:9px;padding:4px 8px;font-family:inherit;background:#fff;width:90px;">
+        <button class="qty-btn p" onclick="chgQty(1)">＋</button>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="mf"><label class="ml">備注（選填）/ Note</label><input class="mi" id="mNote" type="text" placeholder="備注 / Note"></div>
+
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeMov('actionMov')">取消</button>
+      <button class="btn" id="aConfirm" onclick="confirmAction()">✅ 確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt -->
+<div class="mov" id="receiptMov">
+  <div class="modal">
+    <div class="mhdr"><div class="mico">🧾</div><div><h2>操作完成 / Done!</h2><div class="msub">操作明細 / Transaction details</div></div></div>
+    <div id="receiptContent"></div>
+    <p style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:13px">可截圖此畫面作為記錄 / Screenshot as record</p>
+    <div class="mactions"><button class="btn btn-primary" style="width:100%;justify-content:center" onclick="closeReceipt()">✅ 完成 / Close</button></div>
+  </div>
+</div>
+
+<!-- History -->
+<div class="mov" id="histMov">
+  <div class="modal" style="max-width:500px">
+    <div class="mhdr"><div class="mico">📋</div><div><h2>我的操作記錄</h2><div class="msub">My History · 請選擇姓名查詢</div></div></div>
+    <!-- Staff chip picker (synced from staff list) -->
+    <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px">選擇人員 / Select Staff</div>
+    <div id="histStaffGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;margin-bottom:12px;max-height:140px;overflow-y:auto;"></div>
+    <div id="histContent" style="max-height:320px;overflow-y:auto"></div>
+    <div class="mactions"><button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="closeMov('histMov')">關閉</button></div>
+  </div>
+</div>
+
+<!-- Add/Edit Item -->
+<div class="mov" id="itemMov">
+  <div class="modal">
+    <div class="mhdr"><div class="mico" id="itemMIco">➕</div><div><h2 id="itemMTit">新增品項</h2><div class="msub">Add / Edit Item</div></div></div>
+
+    <!-- Photo upload -->
+    <div class="mf">
+      <label class="ml">📷 品項相片 / Photo <span style="font-size:10px;color:var(--sub)">(JPG / PNG)</span></label>
+      <div class="photo-drop" id="photoDrop" onclick="document.getElementById('photoFile').click()">
+        <input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" onchange="handlePhoto(event)" style="display:none">
+        <div id="photoInner">
+          <div class="ph-placeholder"><div class="ph-ico">📷</div><div class="ph-txt">點擊上傳相片<br>Click to upload photo<br>JPG / PNG</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mf"><label class="ml">中文名稱 <span class="req">*</span></label><input class="mi" id="nZh" type="text" placeholder="例：安全帽"></div>
+    <div class="mf"><label class="ml">English Name <span class="req">*</span></label><input class="mi" id="nEn" type="text" placeholder="e.g. Safety Helmet"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="mf"><label class="ml">品號 Item No.</label><input class="mi" id="nItemNo" type="text" placeholder="例：A-001"></div>
+      <div class="mf"><label class="ml">箱入數 Case Qty</label><input class="mi" id="nCaseQty" type="number" min="0" value="0"></div>
+    </div>
+    <div class="mf"><label class="ml">備用圖示 Emoji（無相片時顯示）</label><input class="mi" id="nEmoji" type="text" placeholder="例：⛑️"></div>
+    <div class="mf"><label class="ml">類別 / Category</label>
+      <select class="mi" id="nCat">
+        <option>安全防護 / Safety</option><option>工具 / Tools</option><option>耗材 / Consumables</option>
+        <option>文具 / Stationery</option><option>清潔 / Cleaning</option><option>其他 / Others</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="mf"><label class="ml">庫存數量</label><input class="mi" id="nStock" type="number" min="0" value="0"></div>
+      <div class="mf"><label class="ml">警戒數量 Min</label><input class="mi" id="nMin" type="number" min="0" value="5"></div>
+    </div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeMov('itemMov')">取消</button>
+      <button class="btn btn-success" id="itemMBtn" onclick="saveItem()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Manager -->
+<div class="mov" id="staffMgrMov">
+  <div class="modal" style="max-width:460px">
+    <div class="mhdr"><div class="mico">👤</div><div><h2>人員管理 / Staff</h2><div class="msub">新增、修改或刪除人員 · 資料同步至 Google Sheets</div></div></div>
+
+    <!-- Add new -->
+    <div style="background:var(--primary-light);border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px">➕ 新增人員 / Add Staff</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px">
+        <input class="mi" id="newStaffName" type="text" placeholder="姓名 Name *" style="font-size:13px;padding:8px 11px" onkeydown="if(event.key==='Enter')addStaff()">
+        <input class="mi" id="newStaffDept" type="text" placeholder="部門 Dept（選填）" style="font-size:13px;padding:8px 11px">
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="addStaff()">＋ 新增</button>
+    </div>
+
+    <!-- List -->
+    <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px">現有人員清單 / Current Staff List</div>
+    <div id="staffListDiv" style="max-height:320px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;padding:6px;"></div>
+    <div class="mactions"><button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="closeMov('staffMgrMov')">關閉 Close</button></div>
+  </div>
+</div>
+
+<!-- Edit Staff Modal (sub-modal) -->
+<div class="mov" id="editStaffMov" style="z-index:500">
+  <div class="modal" style="max-width:360px">
+    <div class="mhdr"><div class="mico">✏️</div><div><h2>修改人員 / Edit Staff</h2><div class="msub">修改姓名或部門</div></div></div>
+    <div class="mf"><label class="ml">姓名 Name <span class="req">*</span></label><input class="mi" id="editStaffName" type="text"></div>
+    <div class="mf"><label class="ml">部門 Dept（選填）</label><input class="mi" id="editStaffDept" type="text" placeholder="例：倉庫 Warehouse"></div>
+    <input type="hidden" id="editStaffOrig">
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeMov('editStaffMov')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditStaff()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 批次領取 Modal ══ -->
+<div class="mov" id="batchTakeMov">
+  <div class="modal" style="max-width:540px">
+    <div class="mhdr"><div class="mico">📤📤</div><div><h2>批次領取 / Batch Take</h2><div class="msub">一次領取多個品項</div></div></div>
+    <div class="mf"><label class="ml">👤 操作員 <span class="req">*</span></label><div class="staff-grid" id="batchStaffGrid"></div></div>
+    <div class="mf"><label class="ml">🕐 時間（自動）</label><div class="time-display" id="batchTimeLive">—</div></div>
+    <div class="mf"><label class="ml">📦 選擇品項與數量 <span class="req">*</span></label><div id="batchTakeList" style="max-height:280px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;padding:6px;"></div></div>
+    <div class="mf"><label class="ml">備注（選填）</label><input class="mi" id="batchTakeNote" type="text" placeholder="備注 / Note"></div>
+    <div class="mactions"><button class="btn btn-ghost" onclick="closeMov('batchTakeMov')">取消</button><button class="btn btn-warning" onclick="confirmBatchTake()">📤 確認批次領取</button></div>
+  </div>
+</div>
+
+<!-- ══ 批次領取確認視窗 ══ -->
+<div class="mov" id="batchConfirmMov" style="z-index:450">
+  <div class="modal" style="max-width:500px">
+    <div class="mhdr"><div class="mico">📋</div><div><h2 id="t-confirm-title">確認領取明細</h2><div class="msub" id="t-confirm-sub">請確認品項與數量，如有錯誤請返回修改</div></div></div>
+    <div id="batchConfirmList" style="max-height:360px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;padding:8px;margin-bottom:12px;"></div>
+    <div class="mactions">
+      <button class="btn btn-ghost" onclick="closeMov('batchConfirmMov')" style="gap:6px">
+        ← <span id="t-btn-back">返回修改</span>
+      </button>
+      <button class="btn btn-warning" onclick="submitBatchTake()">
+        📤 <span id="t-btn-submit">確認送出</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 進貨入庫 Modal ══ -->
+<div class="mov" id="restockMov">
+  <div class="modal" style="max-width:520px">
+    <div class="mhdr"><div class="mico">📦</div><div><h2>進貨入庫 / Restock</h2><div class="msub">單筆或批次輸入</div></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <button id="rsModeSingle" class="btn btn-primary" style="justify-content:center;padding:10px" onclick="setRsMode('single')">📋 單筆<br><span style="font-size:10px;font-weight:400">Single</span></button>
+      <button id="rsModeBatch" class="btn btn-ghost" style="justify-content:center;padding:10px" onclick="setRsMode('batch')">📋📋 批次<br><span style="font-size:10px;font-weight:400">Batch</span></button>
+    </div>
+    <!-- 進貨日期（單筆批次共用）-->
+    <div class="mf">
+      <label class="ml">📅 進貨日期 / Date <span class="req">*</span></label>
+      <input class="mi" id="rsDate" type="date">
+    </div>
+    <div id="rsSinglePanel">
+      <div class="mf"><label class="ml">品項 <span class="req">*</span></label><select class="mi" id="rsItem" onchange="updRsStock()"><option value="">-- 請選擇 --</option></select><div id="rsCurrentStock" style="font-size:11px;color:var(--sub);margin-top:5px"></div></div>
+      <div class="mf"><label class="ml">進貨數量 <span class="req">*</span></label><div class="qty-row"><button class="qty-btn m" onclick="chgRsQty(-1)">−</button><input id="rsQty" type="number" value="1" min="1" onfocus="this.select()" style="font-size:24px;font-weight:700;width:80px;text-align:center;border:2px solid var(--success);border-radius:8px;padding:4px;font-family:inherit"><button class="qty-btn p" onclick="chgRsQty(1)">＋</button></div></div>
+      <div class="mf"><label class="ml">備注（選填）</label><input class="mi" id="rsNote" type="text" placeholder="例：廠商送貨"></div>
+    </div>
+    <div id="rsBatchPanel" style="display:none">
+      <div style="font-size:11px;color:var(--sub);margin-bottom:10px;background:var(--primary-light);padding:9px 12px;border-radius:8px">💡 每個品項輸入進貨數量，不需要的留 0</div>
+      <div id="rsBatchList" style="max-height:280px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;padding:6px;"></div>
+      <div class="mf" style="margin-top:10px"><label class="ml">批次備注（選填）</label><input class="mi" id="rsBatchNote" type="text" placeholder="例：每月定期進貨"></div>
+    </div>
+    <div class="mactions"><button class="btn btn-ghost" onclick="closeMov('restockMov')">取消</button><button class="btn btn-success" onclick="confirmRestock()">📦 確認入庫</button></div>
+  </div>
+</div>
+
+
+<!-- Login -->
+<div class="lwall" id="lwall">
+  <div class="lbox">
+    <div class="lhdr"><div class="lico">🔐</div><div class="ltit">行政人員登入</div><div class="lsub">Admin Login Required</div></div>
+    <div class="lerr" id="lerr">❌ 帳號或密碼錯誤</div>
+    <div class="lf"><label class="ll">帳號 / Username</label><input class="li" id="luser" type="text" autocomplete="username"></div>
+    <div class="lf"><label class="ll">密碼 / Password</label><input class="li" id="lpass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="lbtn" onclick="doLogin()">🔓 登入 Login</button>
+    <button class="lcancel" onclick="closeMov('lwall')">取消 Cancel</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════
+const ADMIN_ACCOUNTS = [
+  {username:'admin', password:'1234',   displayName:'管理員 Admin'},
+  {username:'hr',    password:'hr2024', displayName:'人資部 HR'},
+];
+
+// ════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════
+// ── 預設連接網址（已設定好，同仁打開直接使用）──
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwSzM9O_piFM8zTp6rHtX9YrEM1Pfv_LTiK53nVhFWmu9JwZHOWF7zQzs9PY32bHfju/exec';
+let SCRIPT_URL = localStorage.getItem('wh-url') || DEFAULT_URL;
+let items=[], logs=[], staffList=[];
+let selStaff='', selItemId=null, qtyVal=1, mode='take';
+let editId=null, pendingPhoto='';
+let adminOn=false, adminName='';
+
+// ════════════════════════════════════════════════
+//  CLOCK — updates every second
+// ════════════════════════════════════════════════
+function tick(){
+  const n=new Date();
+  const dateStr=n.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'});
+  const timeStr=n.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('hdate').textContent=dateStr;
+  document.getElementById('htime').textContent=timeStr;
+  // Update modal live times (date + HH:MM)
+  const disp=n.toLocaleDateString('zh-TW')+' '+n.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  const tl=document.getElementById('actionTimeLive');
+  if(tl) tl.textContent=disp;
+  const bt=document.getElementById('batchTimeLive');
+  if(bt) bt.textContent=disp;
+}
+setInterval(tick,1000); tick();
+
+// helper: get formatted time string for log
+function nowStr(){
+  const n=new Date();
+  return n.toLocaleDateString('zh-TW')+' '+n.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ════════════════════════════════════════════════
+//  SYNC
+// ════════════════════════════════════════════════
+function setSync(s){
+  const d=document.getElementById('sdot'),t=document.getElementById('stxt');
+  if(s==='ok'){d.className='sdot';t.textContent='已同步 ✓';}
+  else if(s==='sy'){d.className='sdot sy';t.textContent='同步中...';}
+  else if(s==='er'){d.className='sdot er';t.textContent='連線失敗';}
+  else{d.className='sdot er';t.textContent='未連接';}
+}
+
+// ════════════════════════════════════════════════
+//  API — fetch()（GitHub Pages 版本）
+// ════════════════════════════════════════════════
+async function apiGet(action){
+  const r = await fetch(`${SCRIPT_URL}?action=${action}`, {redirect:'follow'});
+  return r.json();
+}
+async function apiPost(data){
+  // Apps Script GET 支援跨來源，POST 不支援，所以全部用 GET
+  const encoded = encodeURIComponent(JSON.stringify(data));
+  const r = await fetch(`${SCRIPT_URL}?action=${data.action}&data=${encoded}`, {redirect:'follow'});
+  return r.json();
+}
+async function loadItems(){
+  setSync('sy');
+  try{
+    const d=await apiGet('getItems');
+    if(d&&d.items){
+      items=d.items.map(i=>({...i,stock:Number(i.stock),min:Number(i.min),id:Number(i.id)}));
+      renderStaffGrid(); setSync('ok');
+    } else if(d&&d.error){ setSync('er'); toast('載入失敗：'+d.error,'er'); }
+  }catch(e){ setSync('er'); toast('連接失敗，請重新整理','er'); }
+  hideLoad();
+}
+async function loadStaff(){
+  try{
+    const d=await apiGet('getStaff');
+    if(d&&d.staff) staffList=d.staff;
+  }catch(e){}
+}
+async function loadLogs(){
+  try{
+    const d=await apiGet('getLogs');
+    if(d&&d.logs) logs=d.logs.map(l=>({...l,time:new Date(l.time)}));
+    renderLog();
+  }catch(e){}
+}
+async function loadAll(){
+  showLoad('載入資料中...');
+  await Promise.all([loadItems(), loadLogs(), loadStaff()]);
+  renderAdminTbl(); renderStats(); hideLoad();
+}
+
+// ════════════════════════════════════════════════
+//  SETUP
+// ════════════════════════════════════════════════
+//  SETUP
+// ════════════════════════════════════════════════
+
+// 第一次設定（從橘色提示欄進入）
+function openSetupModal(){
+  document.getElementById('setupMovTitle').textContent = '設定 Google Sheets';
+  document.getElementById('scriptUrl').value = '';
+  document.getElementById('currentUrlBar').style.display = 'none';
+  openMov('setupMov');
+}
+
+// 行政登入後更換網址
+function openChangeUrl(){
+  document.getElementById('setupMovTitle').textContent = '更換連接網址 / Change URL';
+  document.getElementById('scriptUrl').value = '';
+  const bar = document.getElementById('currentUrlBar');
+  if(SCRIPT_URL){
+    bar.style.display = 'block';
+    document.getElementById('currentUrlText').textContent = SCRIPT_URL;
+  } else {
+    bar.style.display = 'none';
+  }
+  openMov('setupMov');
+}
+
+async function saveUrl(){
+  const url = document.getElementById('scriptUrl').value.trim();
+  if(!url){ toast('請輸入網址','er'); return; }
+  if(!url.startsWith('https://')){ toast('網址必須以 https:// 開頭','er'); return; }
+  if(!url.includes('/exec')){ toast('網址結尾必須是 /exec','er'); return; }
+  SCRIPT_URL = url;
+  localStorage.setItem('wh-url', url);
+  closeMov('setupMov');
+  document.getElementById('setupBanner').classList.add('hidden');
+  showLoad('連接中...');
+  const _to=setTimeout(()=>{hideLoad();setSync('er');toast('連接逾時','er');},12000);
+  try{
+    await Promise.all([loadItems(),loadStaff()]);
+    clearTimeout(_to); hideLoad();
+    toast('✅ 成功連接！','ok');
+  }catch(e){
+    clearTimeout(_to); hideLoad(); setSync('er');
+    toast('連接失敗，請確認網址正確','er');
+  }
+}
+// ════════════════════════════════════════════════
+//  TAB / LOGIN
+// ════════════════════════════════════════════════
+function switchTab(tab){
+  if(tab==='admin'&&!adminOn){
+    document.getElementById('lwall').classList.add('open');
+    setTimeout(()=>document.getElementById('luser').focus(),100);
+    return;
+  }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='admin') loadAll();
+}
+function doLogin(){
+  const u=document.getElementById('luser').value.trim(), p=document.getElementById('lpass').value;
+  const a=ADMIN_ACCOUNTS.find(x=>x.username===u&&x.password===p);
+  if(a){
+    adminOn=true; adminName=a.displayName;
+    document.getElementById('lwall').classList.remove('open');
+    document.getElementById('abadge').classList.add('on');
+    document.getElementById('aname').textContent=adminName;
+    document.getElementById('loutBtn').style.display='block';
+    document.getElementById('lockIco').textContent='🔓';
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-admin').classList.add('active');
+    document.getElementById('tab-admin').classList.add('active');
+    loadAll(); toast(`✅ 歡迎 ${adminName}！`,'ok');
+  }else{
+    document.getElementById('lerr').classList.add('show');
+    document.getElementById('lpass').value='';
+    document.getElementById('lpass').focus();
+  }
+}
+function adminLogout(){
+  adminOn=false; adminName='';
+  document.getElementById('abadge').classList.remove('on');
+  document.getElementById('loutBtn').style.display='none';
+  document.getElementById('lockIco').textContent='🔒';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-staff').classList.add('active');
+  document.getElementById('tab-staff').classList.add('active');
+  toast('已登出','');
+}
+
+// ════════════════════════════════════════════════
+//  STAFF ITEM GRID
+// ════════════════════════════════════════════════
+function renderStaffGrid(){
+  const q=document.getElementById('staffSearch').value.toLowerCase();
+  const f=items.filter(it=>
+    it.active!==false &&
+    (it.zh.includes(q)||it.en.toLowerCase().includes(q)||(it.itemNo||'').toLowerCase().includes(q))
+  );
+  document.getElementById('itemCount').textContent=f.length+' 件';
+  const g=document.getElementById('staffGrid');
+  if(!f.length){g.innerHTML='<div class="empty" style="grid-column:1/-1">找不到品項 / No items found</div>';return;}
+  g.innerHTML=f.map(it=>{
+    const cls=it.stock===0?'out':(it.stock<=it.min?'low':'');
+    const bc=it.stock===0?'bout':(it.stock<=it.min?'blow':'bok');
+    const bl=it.stock===0?'缺貨 OUT':(it.stock<=it.min?'⚠ '+it.stock:'庫存 '+it.stock);
+    const ph=it.photo?`<img src="${it.photo}" alt="" onerror="this.parentElement.innerHTML='<div class=iph-placeholder>${esc(it.emoji||'📦')}</div>'">`:`<div class="iph-placeholder">${it.emoji||'📦'}</div>`;
+    return`<div class="item-card ${cls}" onclick="quickSel(${it.id})">
+      <div class="iph">${ph}</div>
+      ${it.stock===0?'<div class="out-tag">缺貨</div>':''}
+      <div class="iinfo">
+        <div class="iname-zh">${it.zh}</div>
+        <div class="iname-en">${it.en}</div>
+        <div class="ibadge ${bc}">${bl}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function quickSel(id){const it=items.find(i=>i.id===id);if(!it||it.stock===0)return;openActionMov('take',id);}
+
+// ════════════════════════════════════════════════
+//  ACTION MODAL
+// ════════════════════════════════════════════════
+async function openActionMov(m, preId=null){
+  mode='take'; qtyVal=1; selStaff=''; selItemId=preId;
+  const qEl=document.getElementById('qtyNum');
+  if(qEl) qEl.value=1;
+  document.getElementById('mNote').value='';
+  document.getElementById('selBar').classList.remove('show');
+  document.getElementById('aIco').textContent='📤';
+  document.getElementById('aTit').textContent='領取資材 / Take';
+  document.getElementById('aSub').textContent='Take Materials';
+  const cb=document.getElementById('aConfirm');
+  cb.className='btn btn-warning';
+  cb.textContent='✅ 確認領取';
+  // 如果人員清單是空的，先重新載入
+  if(!staffList.length) await loadStaff();
+  renderStaffChips();
+  renderItemChips('take', preId);
+  if(preId) updSelItem(preId);
+  openMov('actionMov');
+}
+
+function renderStaffChips(){
+  const icons=['👷','👩‍🔧','🧑‍🏭','👨‍🔧','🧑‍💼','👩‍💼','🧑‍🔬','👨‍🏭','🧑‍🦱','👩‍🦰'];
+  const ld=document.getElementById('staffLoading');
+  const g=document.getElementById('staffChipGrid');
+  if(!staffList.length){
+    ld.style.display='block';
+    ld.textContent=SCRIPT_URL?'載入中...':'請先連接 Google Sheets，或由行政人員新增人員清單';
+    g.style.display='none'; return;
+  }
+  ld.style.display='none'; g.style.display='grid';
+  g.innerHTML=staffList.map((s,i)=>`
+    <div class="staff-chip ${s.name===selStaff?'sel':''}" onclick="pickStaff('${esc(s.name)}')">
+      <div class="sc-ico">${icons[i%icons.length]}</div>
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-dept">${s.dept||''}</div>
+    </div>`).join('');
+}
+function pickStaff(name){
+  selStaff=name;
+  document.querySelectorAll('.staff-chip').forEach(c=>{
+    c.classList.toggle('sel', c.querySelector('.sc-name').textContent===name);
+  });
+}
+
+function renderItemChips(m, preId){
+  const g=document.getElementById('itemChipGrid');
+  const list=items.filter(it=>m==='take'?it.stock>0:true);
+  g.innerHTML=list.map(it=>{
+    const dis=m==='take'&&it.stock===0;
+    const sel=it.id===preId;
+    const ph=it.photo?`<img src="${it.photo}" alt="" onerror="this.parentElement.innerHTML='<span style=font-size:24px>${esc(it.emoji||'📦')}</span>'">`:`<span style="font-size:24px">${it.emoji||'📦'}</span>`;
+    return`<div class="item-chip ${dis?'dis':''} ${sel?'sel':''}" onclick="pickItem(${it.id},this)">
+      <div class="ic-photo">${ph}</div>
+      <div class="ic-info"><div class="ic-name">${it.zh}</div><div class="ic-stock">${it.en} · ${it.stock}件</div></div>
+    </div>`;
+  }).join('');
+}
+function pickItem(id, el){
+  selItemId=id; qtyVal=1;
+  const qEl=document.getElementById('qtyNum');
+  if(qEl) qEl.value=1;
+  document.querySelectorAll('.item-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  updSelItem(id);
+}
+function updSelItem(id){
+  const it=items.find(i=>i.id===id); if(!it)return;
+  const bar=document.getElementById('selBar');
+  const ph=document.getElementById('selBarPhoto');
+  ph.innerHTML=it.photo?`<img src="${it.photo}" alt="">`: it.emoji||'📦';
+  document.getElementById('selBarName').textContent=`${it.zh} / ${it.en}`;
+  document.getElementById('selBarStock').textContent=it.stock;
+  bar.classList.add('show');
+}
+function chgQty(d){
+  const it=items.find(i=>i.id===selItemId);
+  const max=mode==='take'?(it?it.stock:999):999;
+  qtyVal=Math.max(1,Math.min(qtyVal+d,max));
+  const el=document.getElementById('qtyNum');
+  if(el) el.value=qtyVal;
+}
+function syncQtyInput(el){
+  const it=items.find(i=>i.id===selItemId);
+  const max=mode==='take'?(it?it.stock:999):999;
+  qtyVal=Math.max(1,Math.min(parseInt(el.value)||1,max));
+  el.value=qtyVal;
+}
+
+async function confirmAction(){
+  if(!selStaff){toast('請選擇操作員 / Select staff','er');return;}
+  if(!selItemId){toast('請選擇品項 / Select item','er');return;}
+  const it=items.find(i=>i.id===selItemId);
+  // 讀取輸入框的值（支援手動輸入）
+  const qEl=document.getElementById('qtyNum');
+  if(qEl) qtyVal=Math.max(1,parseInt(qEl.value)||1);
+  if(mode==='take'&&it.stock<qtyVal){toast(`庫存不足 (${it.stock})`,'er');return;}
+  const note=document.getElementById('mNote').value.trim();
+  const now=new Date();
+  const timeDisplay=now.toLocaleDateString('zh-TW')+' '+now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  const before=it.stock;
+  if(mode==='take') it.stock-=qtyVal; else it.stock+=qtyVal;
+  const entry={
+    time:now.toISOString(), timeDisplay,
+    staff:selStaff, itemZh:it.zh, itemEn:it.en,
+    emoji:it.emoji||'📦', photo:it.photo||'',
+    action:mode, qty:qtyVal, note,
+    stockBefore:before, stockAfter:it.stock
+  };
+  closeMov('actionMov');
+  renderStaffGrid();
+  if(SCRIPT_URL){
+    setSync('sy');
+    try{
+      await apiPost({action:'takeItem', id:it.id, stock:it.stock, log:entry});
+      setSync('ok');
+    }catch(e){setSync('er');toast('同步失敗','er');}
+  }
+  logs.unshift({...entry,time:now});
+  showReceipt({...entry,time:now});
+}
+
+// ════════════════════════════════════════════════
+//  RECEIPT
+// ════════════════════════════════════════════════
+function showReceipt(e){
+  const isTake=e.action==='take';
+  const timeStr=e.timeDisplay||(e.time instanceof Date
+    ? e.time.toLocaleDateString('zh-TW')+' '+e.time.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})
+    : new Date(e.time).toLocaleDateString('zh-TW')+' '+new Date(e.time).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
+  const isOut=e.stockAfter===0;
+  // 找到這個品項的 min 值
+  const it=items.find(i=>i.zh===e.itemZh||i.en===e.itemEn);
+  const minVal=it?it.min:5;
+  const isLow=!isOut&&e.stockAfter<=minVal;
+  const rc=isOut?'var(--danger)':isLow?'var(--danger)':'var(--success)';
+  const ph=e.photo?`<div class="rph"><img src="${e.photo}" alt=""></div>`:`<div class="rph">${e.emoji}</div>`;
+  const warnBar=isOut
+    ?`<div style="margin-top:10px;background:var(--danger-light);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--danger);font-weight:700;text-align:center">⚠️ 此品項已缺貨，請盡快訂購！</div>`
+    :isLow
+    ?`<div style="margin-top:10px;background:var(--danger-light);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--danger);font-weight:700;text-align:center">⚠️ 庫存偏低（剩 ${e.stockAfter} 件），請注意訂購</div>`
+    :'';
+  document.getElementById('receiptContent').innerHTML=`
+    <div class="receipt-card">
+      <div class="receipt-title">📤 領取明細 / TAKE</div>
+      <div class="rrow"><span class="rk">操作員 Staff</span><span class="rv">${e.staff}</span></div>
+      <div class="rrow"><span class="rk">時間 Time</span><span class="rv">${timeStr}</span></div>
+      <div class="rrow"><span class="rk">品項 Item</span><span class="rv"><div class="receipt-item-row">${ph}<div><div style="font-weight:700">${e.itemZh}</div><div style="font-size:10px;color:var(--sub)">${e.itemEn}</div></div></div></span></div>
+      <div class="rrow"><span class="rk">領用數量</span><span class="rv r-take" style="font-size:18px">−${e.qty} 件</span></div>
+      <div class="rrow"><span class="rk">剩餘庫存</span><span class="rv" style="color:${rc};font-size:18px;font-weight:700">${e.stockAfter} 件</span></div>
+      ${e.note?`<div class="rrow"><span class="rk">備注</span><span class="rv">${e.note}</span></div>`:''}
+      ${warnBar}
+    </div>`;
+  openMov('receiptMov');
+}
+
+// ════════════════════════════════════════════════
+//  HISTORY — staff chip picker
+// ════════════════════════════════════════════════
+let histSelStaff = '';
+
+function openHistMov(){
+  histSelStaff = '';
+  renderHistStaffChips();
+  document.getElementById('histContent').innerHTML = '<div class="empty">👆 請先選擇人員 / Select a staff member above</div>';
+  openMov('histMov');
+}
+
+function renderHistStaffChips(){
+  const icons=['👷','👩‍🔧','🧑‍🏭','👨‍🔧','🧑‍💼','👩‍💼','🧑‍🔬','👨‍🏭','🧑‍🦱','👩‍🦰'];
+  const g = document.getElementById('histStaffGrid');
+  if(!staffList.length){
+    g.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px">尚無人員資料 / No staff data</div>';
+    return;
+  }
+  g.innerHTML = staffList.map((s,i)=>`
+    <div class="staff-chip ${s.name===histSelStaff?'sel':''}"
+         onclick="pickHistStaff('${esc(s.name)}')"
+         style="padding:7px 5px;border-radius:9px">
+      <div class="sc-ico">${icons[i%icons.length]}</div>
+      <div class="sc-name" style="font-size:10px">${s.name}</div>
+    </div>`).join('');
+}
+
+function pickHistStaff(name){
+  histSelStaff = name;
+  renderHistStaffChips();
+  renderHist();
+}
+
+function renderHist(){
+  const c = document.getElementById('histContent');
+  if(!histSelStaff){
+    c.innerHTML='<div class="empty">👆 請先選擇人員 / Select a staff member above</div>';
+    return;
+  }
+  const f = logs.filter(l=>l.staff===histSelStaff&&(l.action==='take'||l.action==='return'));
+  if(!f.length){
+    c.innerHTML=`<div class="empty">「${histSelStaff}」目前沒有操作記錄<br><span style="font-size:11px">No records found</span></div>`;
+    return;
+  }
+  c.innerHTML = f.map(l=>{
+    const isTake=l.action==='take';
+    const t=l.time instanceof Date?l.time:new Date(l.time);
+    const ts=t.toLocaleDateString('zh-TW')+' '+t.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    const ph=l.photo?`<img src="${l.photo}" style="width:28px;height:28px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:4px">`:`<span style="margin-right:3px">${l.emoji||'📦'}</span>`;
+    return`<div class="hentry">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-weight:700;color:${isTake?'#c27803':'var(--success)'}">${isTake?'📤 領取':'📥 歸還'}</span>
+        <span style="font-size:10px;color:var(--sub)">${ts}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span>${ph}<strong>${l.itemZh}</strong> <span style="font-size:10px;color:var(--sub)">${l.itemEn}</span></span>
+        <span style="font-weight:700;font-size:16px">${l.qty} 件</span>
+      </div>
+      ${l.note?`<div style="font-size:10px;color:var(--sub);margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">備注: ${l.note}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  STAFF MANAGER — add / edit / delete
+// ════════════════════════════════════════════════
+function openStaffMgr(){ renderStaffList(); openMov('staffMgrMov'); }
+
+function renderStaffList(){
+  const icons=['👷','👩‍🔧','🧑‍🏭','👨‍🔧','🧑‍💼','👩‍💼','🧑‍🔬','👨‍🏭','🧑‍🦱','👩‍🦰'];
+  const d = document.getElementById('staffListDiv');
+  if(!staffList.length){
+    d.innerHTML='<div class="empty">尚無人員 / No staff added yet</div>'; return;
+  }
+  d.innerHTML = staffList.map((s,i)=>`
+    <div class="staff-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">${icons[i%icons.length]}</span>
+        <div>
+          <div style="font-weight:700;font-size:13px">${s.name}</div>
+          <div style="font-size:10px;color:var(--sub)">${s.dept||'—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-ghost btn-sm" onclick="openEditStaff('${esc(s.name)}')">✏️ 修改</button>
+        <button class="btn btn-danger btn-sm" onclick="delStaff('${esc(s.name)}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addStaff(){
+  const name = document.getElementById('newStaffName').value.trim();
+  const dept = document.getElementById('newStaffDept').value.trim();
+  if(!name){ toast('請輸入姓名 / Enter name','er'); return; }
+  if(staffList.find(s=>s.name===name)){ toast('此人員已存在 / Already exists','er'); return; }
+  const s = {name, nameEn:'', dept, note:''};
+  staffList.push(s);
+  document.getElementById('newStaffName').value='';
+  document.getElementById('newStaffDept').value='';
+  renderStaffList();
+  if(SCRIPT_URL){ try{ await apiPost({action:'addStaff',staff:s}); }catch(e){} }
+  toast(`✅ 已新增 ${name}`,'ok');
+}
+
+function openEditStaff(origName){
+  const s = staffList.find(x=>x.name===origName); if(!s) return;
+  document.getElementById('editStaffName').value = s.name;
+  document.getElementById('editStaffDept').value = s.dept||'';
+  document.getElementById('editStaffOrig').value = origName;
+  openMov('editStaffMov');
+}
+
+async function saveEditStaff(){
+  const orig  = document.getElementById('editStaffOrig').value;
+  const name  = document.getElementById('editStaffName').value.trim();
+  const dept  = document.getElementById('editStaffDept').value.trim();
+  if(!name){ toast('姓名不可空白','er'); return; }
+  if(name!==orig && staffList.find(s=>s.name===name)){ toast('此姓名已存在','er'); return; }
+
+  const idx = staffList.findIndex(s=>s.name===orig);
+  if(idx===-1) return;
+  staffList[idx] = {...staffList[idx], name, dept};
+
+  // Also update any logs that reference the old name
+  logs.forEach(l=>{ if(l.staff===orig) l.staff=name; });
+
+  closeMov('editStaffMov');
+  renderStaffList();
+  renderLog();
+
+  // Sync: use updateStaff API
+  if(SCRIPT_URL){
+    setSync('sy');
+    try{
+      await apiPost({action:'updateStaff', origName:orig, staff:staffList[idx]});
+      setSync('ok');
+    }catch(e){ setSync('er'); }
+  }
+  toast(`✅ 已更新為「${name}」`,'ok');
+}
+
+async function delStaff(name){
+  if(!confirm(`確定移除「${name}」？\nDelete "${name}"?`)) return;
+  staffList = staffList.filter(s=>s.name!==name);
+  renderStaffList();
+  if(SCRIPT_URL){ try{ await apiPost({action:'deleteStaff',name}); }catch(e){} }
+  toast(`🗑 已刪除 ${name}`,'er');
+}
+
+// ════════════════════════════════════════════════
+//  PHOTO UPLOAD (file → base64)
+// ════════════════════════════════════════════════
+function handlePhoto(event){
+  const file=event.target.files[0]; if(!file)return;
+  // Resize to max 600px wide to keep base64 reasonable size
+  const img=new Image();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    img.onload=()=>{
+      const MAX=200;
+      let w=img.width, h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      pendingPhoto=canvas.toDataURL('image/jpeg',0.6);
+      updatePhotoPrev(pendingPhoto);
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function updatePhotoPrev(src){
+  const inner=document.getElementById('photoInner');
+  if(src){
+    inner.innerHTML=`<img src="${src}" class="ph-preview"><div class="ph-change">點擊更換</div>`;
+  }else{
+    inner.innerHTML='<div class="ph-placeholder"><div class="ph-ico">📷</div><div class="ph-txt">點擊上傳相片<br>Click to upload photo<br>JPG / PNG</div></div>';
+  }
+}
+
+// ════════════════════════════════════════════════
+//  ADD / EDIT ITEM
+// ════════════════════════════════════════════════
+function openAddItemMov(){
+  editId=null; pendingPhoto='';
+  document.getElementById('itemMIco').textContent='➕';
+  document.getElementById('itemMTit').textContent='新增品項 / Add Item';
+  document.getElementById('itemMBtn').textContent='💾 新增';
+  ['nZh','nEn','nEmoji'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nStock').value=0;
+  document.getElementById('nMin').value=5;
+  document.getElementById('photoFile').value='';
+  updatePhotoPrev('');
+  openMov('itemMov');
+}
+function openEditItemMov(id){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  editId=id; pendingPhoto=it.photo||'';
+  document.getElementById('itemMIco').textContent='✏️';
+  document.getElementById('itemMTit').textContent='編輯品項 / Edit';
+  document.getElementById('itemMBtn').textContent='💾 儲存更新';
+  document.getElementById('nZh').value=it.zh;
+  document.getElementById('nEn').value=it.en;
+  document.getElementById('nEmoji').value=it.emoji||'';
+  document.getElementById('nStock').value=it.stock;
+  document.getElementById('nMin').value=it.min;
+  document.getElementById('nCat').value=it.category;
+  document.getElementById('photoFile').value='';
+  updatePhotoPrev(it.photo||'');
+  openMov('itemMov');
+}
+async function saveItem(){
+  const zh=document.getElementById('nZh').value.trim();
+  const en=document.getElementById('nEn').value.trim();
+  if(!zh||!en){toast('請填寫名稱','er');return;}
+  const newData={
+    zh, en,
+    emoji:document.getElementById('nEmoji').value.trim()||'📦',
+    category:document.getElementById('nCat').value,
+    stock:parseInt(document.getElementById('nStock').value)||0,
+    min:parseInt(document.getElementById('nMin').value)||5,
+    itemNo:document.getElementById('nItemNo').value.trim(),
+    caseQty:parseInt(document.getElementById('nCaseQty').value)||0,
+    photo:pendingPhoto
+  };
+  if(editId){
+    Object.assign(items.find(i=>i.id===editId),newData);
+    if(SCRIPT_URL){setSync('sy');try{await apiPost({action:'updateItem',id:editId,item:{...newData,active:items.find(i=>i.id===editId)?.active!==false}});setSync('ok');}catch(e){setSync('er');}}
+    toast(`✅ 已更新 ${zh}`,'ok');
+  }else{
+    if(SCRIPT_URL){
+      setSync('sy');
+      try{const r=await apiPost({action:'addItem',item:newData});if(r&&r.id)newData.id=r.id;setSync('ok');}
+      catch(e){setSync('er');}
+    }
+    if(!newData.id) newData.id=Date.now();
+    newData.active=true;
+    items.push(newData);
+    toast(`✅ 已新增 ${zh}`,'ok');
+  }
+  closeMov('itemMov');
+  renderStaffGrid(); renderAdminTbl(); renderStats();
+}
+
+// ════════════════════════════════════════════════
+//  ADMIN TABLE
+// ════════════════════════════════════════════════
+function renderStats(){
+  const ok=items.filter(i=>i.stock>i.min).length;
+  const low=items.filter(i=>i.stock>0&&i.stock<=i.min).length;
+  const out=items.filter(i=>i.stock===0).length;
+  document.getElementById('sTotal').textContent=items.length;
+  document.getElementById('sOk').textContent=ok;
+  document.getElementById('sLow').textContent=low;
+  document.getElementById('sOut').textContent=out;
+}
+function renderAdminTbl(){
+  const q=(document.getElementById('aSearch').value||'').toLowerCase();
+  const f=document.getElementById('aFilter').value;
+  const list=items.filter(it=>{
+    const mq=it.zh.includes(q)||it.en.toLowerCase().includes(q)||
+      (it.category||'').toLowerCase().includes(q)||
+      (it.itemNo||'').toLowerCase().includes(q);
+    const s=it.stock===0?'out':(it.stock<=it.min?'low':'ok');
+    if(f==='inactive') return mq&&it.active===false;
+    if(f==='all') return mq;
+    return mq&&it.active!==false&&(f==='all'||s===f);
+  });
+  document.getElementById('adminTbl').innerHTML=list.map(it=>{
+    const isActive=it.active!==false;
+    const s=it.stock===0?'out':(it.stock<=it.min?'low':'ok');
+    const bc=!isActive?'b-off':(s==='ok'?'b-ok':(s==='low'?'b-low':'b-out'));
+    const bt=!isActive?'⏸ 停用':(s==='ok'?'正常 OK':(s==='low'?'偏低 Low':'缺貨 Out'));
+    const ph=it.photo
+      ?`<div class="tbl-ph" style="${!isActive?'opacity:.4':''}"><img src="${it.photo}" alt="" onerror="this.parentElement.innerHTML='${esc(it.emoji||'📦')}'"></div>`
+      :`<div class="tbl-ph" style="${!isActive?'opacity:.4':''}">${it.emoji||'📦'}</div>`;
+    const toggleLabel=isActive?'⏸ 停用':'▶ 啟用';
+    const toggleCls=isActive?'btn-warning':'btn-success';
+    return`<tr style="${!isActive?'opacity:.55':''}">
+      <td>${ph}</td>
+      <td style="font-size:11px;color:var(--sub);font-weight:600">${it.itemNo||'—'}</td>
+      <td><strong>${it.zh}</strong>${!isActive?'<span style="font-size:9px;color:#c27803;margin-left:4px">（停用）</span>':''}</td>
+      <td style="color:var(--sub)">${it.en}</td>
+      <td><span class="badge b-cat" style="font-size:9px">${it.category||''}</span></td>
+      <td><input class="edit-inp" type="number" min="0" value="${it.stock}" onchange="updStockAdmin(${it.id},this.value)" ${!isActive?'disabled':''}></td>
+      <td><input class="edit-inp" type="number" min="0" value="${it.min}" onchange="updMin(${it.id},this.value)" ${!isActive?'disabled':''}></td>
+      <td style="text-align:center;font-size:12px;color:var(--sub)">${it.caseQty>0?it.caseQty+'件/箱':'—'}</td>
+      <td><span class="badge ${bc}">${bt}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn ${toggleCls} btn-sm" onclick="toggleActive(${it.id})">${toggleLabel}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditItemMov(${it.id})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="delItem(${it.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function updStockAdmin(id,val){
+  const it=items.find(i=>i.id===id);const old=it.stock;
+  it.stock=Math.max(0,parseInt(val)||0);
+  renderStats();renderStaffGrid();
+  if(SCRIPT_URL){
+    setSync('sy');
+    try{
+      await apiPost({action:'updateStock',id,stock:it.stock});
+      if(it.stock!==old) await apiPost({action:'addLog',log:{time:new Date().toISOString(),staff:adminName||'Admin',itemZh:it.zh,itemEn:it.en,emoji:it.emoji||'📦',photo:it.photo||'',action:'adjust',qty:it.stock-old,note:`庫存調整 ${old}→${it.stock}`,stockBefore:old,stockAfter:it.stock}});
+      setSync('ok');
+    }catch(e){setSync('er');}
+  }
+}
+function updMin(id,val){
+  items.find(i=>i.id===id).min=Math.max(0,parseInt(val)||0);
+  renderStats();renderAdminTbl();renderStaffGrid();
+}
+async function delItem(id){
+  if(!confirm('確定刪除？/ Delete?'))return;
+  const it=items.find(i=>i.id===id);
+  items=items.filter(i=>i.id!==id);
+  renderAdminTbl();renderStats();renderStaffGrid();
+  if(SCRIPT_URL){setSync('sy');try{await apiPost({action:'deleteItem',id});setSync('ok');}catch(e){setSync('er');}}
+  toast(`🗑 已刪除 ${it.zh}`,'er');
+}
+
+// ════════════════════════════════════════════════
+//  LOG
+// ════════════════════════════════════════════════
+function renderLog(){
+  const f=document.getElementById('logFilter').value;
+  const q=(document.getElementById('logSearch').value||'').toLowerCase();
+  const list=logs.filter(l=>(f==='all'||l.action===f)&&(l.staff.toLowerCase().includes(q)||l.itemZh.includes(q)||l.itemEn.toLowerCase().includes(q)));
+  document.getElementById('logCount').textContent=list.length+' 筆';
+  const aL={take:'📤 領取',restock:'📦 進貨',adjust:'⚙️ 調整'};
+  const aC={take:'l-take',restock:'l-restock',adjust:'l-adj'};
+  document.getElementById('logTbl').innerHTML=!list.length
+    ?'<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:18px">暫無記錄</td></tr>'
+    :list.map(l=>{
+      const t=l.time instanceof Date?l.time:new Date(l.time);
+      const ts=t.toLocaleDateString('zh-TW')+' '+t.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+      const ph=l.photo?`<img src="${l.photo}" style="width:26px;height:26px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:3px">`:`<span style="margin-right:3px">${l.emoji||'📦'}</span>`;
+      return`<tr>
+        <td style="white-space:nowrap;font-size:10px;color:var(--sub)">${ts}</td>
+        <td><strong>${l.staff}</strong></td>
+        <td>${ph}${l.itemZh}<br><span style="font-size:9px;color:var(--sub)">${l.itemEn}</span></td>
+        <td class="${aC[l.action]}">${aL[l.action]}</td>
+        <td style="font-weight:700">${l.qty>0?'+'+l.qty:l.qty}</td>
+        <td style="font-size:10px;color:var(--sub)">${l.note||'—'}</td>
+      </tr>`;
+    }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  CSV
+// ════════════════════════════════════════════════
+function exportCSV(){
+  const h='品項,English,類別,庫存,警戒,狀態';
+  const rows=items.map(it=>{const s=it.stock===0?'Out':(it.stock<=it.min?'Low':'OK');return`"${it.zh}","${it.en}","${it.category}",${it.stock},${it.min},${s}`;});
+  const b=new Blob(['\uFEFF'+[h,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`inventory_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast('✅ CSV 已匯出','ok');
+}
+
+// ════════════════════════════════════════════════
+//  MODAL HELPERS
+// ════════════════════════════════════════════════
+function openMov(id){document.getElementById(id).classList.add('open');}
+function closeMov(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='lwall') document.getElementById('lerr').classList.remove('show');
+}
+
+// ════════════════════════════════════════════════
+//  LOADING / TOAST / ESC HELPER
+// ════════════════════════════════════════════════
+function showLoad(t='載入中...'){document.getElementById('loadTxt').textContent=t;document.getElementById('loadOv').classList.remove('hidden');}
+function hideLoad(){document.getElementById('loadOv').classList.add('hidden');}
+function toast(msg,type=''){
+  const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;
+  document.getElementById('tc').appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+const demo=[
+  {id:1,zh:'安全帽',en:'Safety Helmet',emoji:'⛑️',photo:'',category:'安全防護 / Safety',stock:24,min:5},
+  {id:2,zh:'安全背心',en:'Safety Vest',emoji:'🦺',photo:'',category:'安全防護 / Safety',stock:18,min:5},
+  {id:3,zh:'防護手套',en:'Work Gloves',emoji:'🧤',photo:'',category:'安全防護 / Safety',stock:3,min:10},
+  {id:4,zh:'護目鏡',en:'Safety Goggles',emoji:'🥽',photo:'',category:'安全防護 / Safety',stock:0,min:5},
+  {id:5,zh:'工作手電筒',en:'Flashlight',emoji:'🔦',photo:'',category:'工具 / Tools',stock:8,min:3},
+  {id:6,zh:'口罩',en:'Face Mask',emoji:'😷',photo:'',category:'安全防護 / Safety',stock:150,min:50},
+];
+const demoStaff=[
+  {name:'Ali',nameEn:'Ali',dept:'倉庫 Warehouse',note:''},
+  {name:'Budi',nameEn:'Budi',dept:'倉庫 Warehouse',note:''},
+  {name:'Carlos',nameEn:'Carlos',dept:'物流 Logistics',note:''},
+  {name:'Diana',nameEn:'Diana',dept:'物流 Logistics',note:''},
+];
+
+if(SCRIPT_URL){
+  document.getElementById('setupBanner').classList.add('hidden');  showLoad('載入中...');
+  const _loadTO=setTimeout(()=>{
+    hideLoad(); setSync('er');
+    toast('載入逾時，請重新整理','er');
+    if(!items.length){items=demo;staffList=demoStaff;renderStaffGrid();}
+  },12000);
+  Promise.all([loadItems(),loadStaff()])
+    .then(()=>{clearTimeout(_loadTO);hideLoad();})
+    .catch(()=>{clearTimeout(_loadTO);hideLoad();});
+} else {
+  // 未設定網址，顯示設定提示
+  items=demo; staffList=demoStaff;
+  hideLoad(); setSync('none'); renderStaffGrid();
+}
+// ════════════════════════════════════════════════
+//  TOGGLE ACTIVE（顯示 / 停用品項）
+// ════════════════════════════════════════════════
+async function toggleActive(id){
+  const it=items.find(i=>i.id===id); if(!it)return;
+  it.active=it.active===false?true:false;
+  const on=it.active!==false;
+  renderAdminTbl();renderStats();renderStaffGrid();
+  if(SCRIPT_URL){setSync('sy');try{
+    await apiPost({action:'updateItem',id,item:{...it}});
+    await apiPost({action:'addLog',log:{time:new Date().toISOString(),staff:adminName||'Admin',itemZh:it.zh,itemEn:it.en,emoji:it.emoji||'📦',photo:it.photo||'',action:'adjust',qty:0,note:on?'品項已啟用':'品項已停用',stockBefore:it.stock,stockAfter:it.stock}});
+    setSync('ok');}catch(e){setSync('er');}}
+  toast(on?`▶ 已啟用「${it.zh}」`:`⏸ 已停用「${it.zh}」`,on?'ok':'');
+}
+
+// ════════════════════════════════════════════════
+//  RESTOCK 進貨入庫
+// ════════════════════════════════════════════════
+let rsMode='single';
+function openRestockMov(){
+  rsMode='single';setRsMode('single');
+  const sel=document.getElementById('rsItem');
+  if(sel)sel.innerHTML='<option value="">-- 請選擇 --</option>'+items.filter(i=>i.active!==false).map(i=>`<option value="${i.id}">${i.emoji||'📦'} ${i.itemNo?'['+i.itemNo+'] ':''}${i.zh} / ${i.en}（庫存：${i.stock}）</option>`).join('');
+  const qEl=document.getElementById('rsQty');if(qEl)qEl.value=1;
+  const nEl=document.getElementById('rsNote');if(nEl)nEl.value='';
+  const bnEl=document.getElementById('rsBatchNote');if(bnEl)bnEl.value='';
+  const csEl=document.getElementById('rsCurrentStock');if(csEl)csEl.textContent='';
+  // 預設今天日期
+  const dEl=document.getElementById('rsDate');
+  if(dEl) dEl.value=new Date().toISOString().slice(0,10);
+  renderBatchList();openMov('restockMov');
+}
+function setRsMode(m){
+  rsMode=m;
+  const sp=document.getElementById('rsSinglePanel');if(sp)sp.style.display=m==='single'?'block':'none';
+  const bp=document.getElementById('rsBatchPanel');if(bp)bp.style.display=m==='batch'?'block':'none';
+  const sb=document.getElementById('rsModeSingle');if(sb){sb.className=`btn ${m==='single'?'btn-primary':'btn-ghost'}`;sb.style.cssText='justify-content:center;padding:10px';}
+  const bb=document.getElementById('rsModeBatch');if(bb){bb.className=`btn ${m==='batch'?'btn-success':'btn-ghost'}`;bb.style.cssText='justify-content:center;padding:10px';}
+}
+function updRsStock(){
+  const id=parseInt(document.getElementById('rsItem').value);
+  const el=document.getElementById('rsCurrentStock');
+  if(!id){el.textContent='';return;}
+  const it=items.find(i=>i.id===id);
+  el.innerHTML=`目前庫存：<strong>${it.stock}</strong> 件${it.caseQty>0?` · 箱入數：<strong>${it.caseQty}</strong> 件/箱`:''} · 入庫後 <strong id="rsAfter">${it.stock+1}</strong> 件`;
+  updateRsAfter();
+}
+function updateRsAfter(){
+  const id=parseInt(document.getElementById('rsItem').value);
+  const qty=parseInt(document.getElementById('rsQty').value)||0;
+  const it=items.find(i=>i.id===id);
+  const el=document.getElementById('rsAfter');
+  if(it&&el)el.textContent=it.stock+qty;
+}
+function chgRsQty(d){const el=document.getElementById('rsQty');el.value=Math.max(1,(parseInt(el.value)||0)+d);updateRsAfter();}
+function renderBatchList(){
+  const el=document.getElementById('rsBatchList');if(!el)return;
+  const active=items.filter(i=>i.active!==false);
+  el.innerHTML=active.map(it=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border)">
+      <div style="flex-shrink:0;font-size:20px">${it.photo?`<img src="${it.photo}" style="width:28px;height:28px;border-radius:5px;object-fit:cover">`:it.emoji||'📦'}</div>
+      <div style="flex:1;min-width:0">
+        ${it.itemNo?`<div style="font-size:9px;color:var(--sub);font-weight:600">${it.itemNo}</div>`:''}
+        <div style="font-size:13px;font-weight:700">${it.zh}</div>
+        <div style="font-size:10px;color:var(--sub)">${it.en} · 現有 ${it.stock} 件${it.caseQty>0?' · 箱入 '+it.caseQty+' 件':''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button onclick="chgBatchQty(${it.id},-1)" style="width:28px;height:28px;border:none;border-radius:6px;background:var(--danger-light);color:var(--danger);font-size:16px;cursor:pointer;font-weight:700">−</button>
+        <input id="bq_${it.id}" type="number" min="0" value="0" style="width:58px;text-align:center;font-size:14px;font-weight:700;border:2px solid var(--border);border-radius:6px;padding:3px 4px;font-family:inherit" oninput="highlightBatch(${it.id})">
+        <button onclick="chgBatchQty(${it.id},1)" style="width:28px;height:28px;border:none;border-radius:6px;background:var(--success-light);color:var(--success);font-size:16px;cursor:pointer;font-weight:700">＋</button>
+      </div>
+    </div>`).join('');
+}
+function chgBatchQty(id,d){const el=document.getElementById('bq_'+id);const it=items.find(i=>i.id===id);el.value=Math.max(0,(parseInt(el.value)||0)+d);highlightBatch(id);}
+function highlightBatch(id){const el=document.getElementById('bq_'+id);const v=parseInt(el.value)||0;el.style.borderColor=v>0?'var(--success)':'var(--border)';el.style.color=v>0?'var(--success)':'';}
+async function confirmRestock(){
+  const note=rsMode==='single'?document.getElementById('rsNote').value.trim():document.getElementById('rsBatchNote').value.trim();
+  const dateVal=document.getElementById('rsDate').value;
+  if(!dateVal){toast('請選擇進貨日期','er');return;}
+  // 用選擇的日期，保留當天時間
+  const now=new Date(dateVal+'T'+new Date().toTimeString().slice(0,8));
+  if(rsMode==='single'){
+    const id=parseInt(document.getElementById('rsItem').value);
+    const qty=parseInt(document.getElementById('rsQty').value)||0;
+    if(!id){toast('請選擇品項','er');return;}
+    if(qty<1){toast('數量至少為 1','er');return;}
+    await doRestock([{id,qty}],note,now);
+  }else{
+    const entries=items.filter(i=>i.active!==false).map(i=>({id:i.id,qty:parseInt(document.getElementById('bq_'+i.id)?.value)||0})).filter(e=>e.qty>0);
+    if(!entries.length){toast('請至少輸入一項進貨數量','er');return;}
+    await doRestock(entries,note,now);
+  }
+  closeMov('restockMov');
+}
+async function doRestock(entries,note,now){
+  let count=0;setSync('sy');
+  const dateStr=now.toLocaleDateString('zh-TW');
+  const noteWithDate=note?`${note}（${dateStr}）`:`進貨入庫 ${dateStr}`;
+  for(const e of entries){
+    const it=items.find(i=>i.id===e.id);if(!it)continue;
+    const before=it.stock;it.stock+=e.qty;
+    try{
+      if(SCRIPT_URL){
+        await apiPost({action:'restockItem', id:it.id, stock:it.stock, log:{time:now.toISOString(),staff:adminName||'Admin',itemZh:it.zh,itemEn:it.en,emoji:it.emoji||'📦',photo:it.photo||'',action:'restock',qty:e.qty,note:noteWithDate,stockBefore:before,stockAfter:it.stock}});
+      }
+      logs.unshift({time:now,staff:adminName||'Admin',itemZh:it.zh,itemEn:it.en,emoji:it.emoji||'📦',photo:it.photo||'',action:'restock',qty:e.qty,note:noteWithDate,stockBefore:before,stockAfter:it.stock});
+      count++;
+    }catch(err){setSync('er');}
+  }
+  setSync('ok');renderStaffGrid();renderAdminTbl();renderStats();renderLog();
+  toast(`✅ 入庫完成！共 ${count} 個品項已更新`,'ok');
+}
+
+// ════════════════════════════════════════════════
+//  BATCH TAKE 批次領取
+// ════════════════════════════════════════════════
+let batchTakeSelStaff='';
+async function openBatchTakeMov(){
+  batchTakeSelStaff='';
+  // 如果人員清單是空的，先重新載入
+  if(!staffList.length){
+    await loadStaff();
+  }
+  renderBatchStaffChips();
+  renderBatchTakeList();
+  const n=document.getElementById('batchTakeNote');if(n)n.value='';
+  openMov('batchTakeMov');
+}
+function renderBatchStaffChips(){
+  const icons=['👷','👩‍🔧','🧑‍🏭','👨‍🔧','🧑‍💼','👩‍💼','🧑‍🔬','👨‍🏭'];
+  const g=document.getElementById('batchStaffGrid');if(!g)return;
+  if(!staffList.length){g.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px">尚無人員</div>';return;}
+  g.innerHTML=staffList.map((s,i)=>`<div class="staff-chip ${s.name===batchTakeSelStaff?'sel':''}" onclick="pickBatchStaff('${esc(s.name)}')" style="padding:7px 5px;border-radius:9px"><div class="sc-ico">${icons[i%icons.length]}</div><div class="sc-name" style="font-size:10px">${s.name}</div></div>`).join('');
+}
+function pickBatchStaff(name){batchTakeSelStaff=name;renderBatchStaffChips();}
+function renderBatchTakeList(){
+  const el=document.getElementById('batchTakeList');if(!el)return;
+  const active=items.filter(i=>i.active!==false&&i.stock>0);
+  if(!active.length){el.innerHTML='<div class="empty">目前沒有可領取的品項</div>';return;}
+  el.innerHTML=active.map(it=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border)">
+      <div style="flex-shrink:0">${it.photo?`<img src="${it.photo}" style="width:32px;height:32px;border-radius:5px;object-fit:cover">`:it.emoji||'📦'}</div>
+      <div style="flex:1;min-width:0">
+        ${it.itemNo?`<div style="font-size:9px;color:var(--sub);font-weight:600">${it.itemNo}</div>`:''}
+        <div style="font-size:13px;font-weight:700">${it.zh}</div>
+        <div style="font-size:10px;color:var(--sub)">${it.en} · 庫存 ${it.stock} 件</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button onclick="chgBatchTakeQty(${it.id},-1)" style="width:28px;height:28px;border:none;border-radius:6px;background:var(--danger-light);color:var(--danger);font-size:16px;cursor:pointer;font-weight:700">−</button>
+        <input id="btq_${it.id}" type="number" min="0" max="${it.stock}" value="0" style="width:52px;text-align:center;font-size:14px;font-weight:700;border:2px solid var(--border);border-radius:6px;padding:3px 4px;font-family:inherit" oninput="highlightBatchTake(${it.id})">
+        <button onclick="chgBatchTakeQty(${it.id},1)" style="width:28px;height:28px;border:none;border-radius:6px;background:var(--success-light);color:var(--success);font-size:16px;cursor:pointer;font-weight:700">＋</button>
+      </div>
+    </div>`).join('');
+}
+function chgBatchTakeQty(id,d){const el=document.getElementById('btq_'+id);const it=items.find(i=>i.id===id);el.value=Math.max(0,Math.min((parseInt(el.value)||0)+d,it?it.stock:999));highlightBatchTake(id);}
+function highlightBatchTake(id){const el=document.getElementById('btq_'+id);const v=parseInt(el.value)||0;el.style.borderColor=v>0?'var(--warning)':'var(--border)';el.style.color=v>0?'var(--warning)':'';}
+// 第一步：顯示確認視窗（可修改數量）
+function confirmBatchTake(){
+  if(!batchTakeSelStaff){toast('請選擇操作員','er');return;}
+  const active=items.filter(i=>i.active!==false&&i.stock>0);
+  const entries=active.map(it=>({id:it.id,qty:parseInt(document.getElementById('btq_'+it.id)?.value)||0})).filter(e=>e.qty>0);
+  if(!entries.length){toast('請至少輸入一項數量','er');return;}
+  for(const e of entries){
+    const it=items.find(i=>i.id===e.id);
+    if(it.stock<e.qty){toast(`「${it.zh}」庫存不足 (${it.stock})`,'er');return;}
+  }
+  const note=document.getElementById('batchTakeNote').value.trim();
+  // 渲染確認視窗（唯讀，不可修改）
+  const rows=entries.map(e=>{
+    const it=items.find(i=>i.id===e.id);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid var(--border)">
+      <div style="flex-shrink:0">${it.photo?`<img src="${it.photo}" style="width:36px;height:36px;border-radius:6px;object-fit:cover">`:it.emoji||'📦'}</div>
+      <div style="flex:1;min-width:0">
+        ${it.itemNo?`<div style="font-size:9px;color:var(--sub);font-weight:600">${it.itemNo}</div>`:''}
+        <div style="font-size:13px;font-weight:700">${it.zh}</div>
+        <div style="font-size:10px;color:var(--sub)">${it.en}</div>
+      </div>
+      <div style="font-size:22px;font-weight:700;color:var(--warning);min-width:60px;text-align:right">${e.qty} <span style="font-size:12px;color:var(--sub)">件</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('batchConfirmList').innerHTML=`
+    <div style="background:var(--primary-light);border-radius:8px;padding:10px 13px;margin-bottom:10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+      <span>👤 <strong>${batchTakeSelStaff}</strong></span>
+      <span>📦 <strong>${entries.length}</strong> 項${note?`　📝 ${note}`:''}</span>
+    </div>
+    ${rows}`;
+  openMov('batchConfirmMov');
+}
+
+function chgConfirmQty(id,d){
+  const el=document.getElementById('cq_'+id);
+  const it=items.find(i=>i.id===id);
+  const max=it?it.stock:999;
+  el.value=Math.max(1,Math.min((parseInt(el.value)||0)+d,max));
+}
+function validateConfirmQty(id,max){
+  const el=document.getElementById('cq_'+id);
+  const v=parseInt(el.value)||1;
+  if(v>max){el.value=max;toast(`最多可領 ${max} 件`,'');}
+  if(v<1) el.value=1;
+}
+function removeConfirmEntry(id){
+  const row=document.getElementById('cq_'+id)?.closest('div[style*="border-bottom"]');
+  if(row) row.remove();
+  // 也清空原本的批次輸入
+  const orig=document.getElementById('btq_'+id);
+  if(orig) orig.value=0;
+}
+
+// 第二步：真正送出
+async function submitBatchTake(){
+  const note=document.getElementById('batchTakeNote').value.trim();
+  const active=items.filter(i=>i.active!==false&&i.stock>0);
+  const entries=active
+    .map(it=>({ id:it.id, qty:parseInt(document.getElementById('btq_'+it.id)?.value)||0 }))
+    .filter(e=>e.qty>0);
+  if(!entries.length){toast('沒有任何品項，請返回修改','er');return;}
+  for(const e of entries){
+    const it=items.find(i=>i.id===e.id);
+    if(it.stock<e.qty){toast(`「${it.zh}」庫存不足 (${it.stock})`,'er');return;}
+  }
+  const now=new Date();
+  const td=now.toLocaleDateString('zh-TW')+' '+now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+
+  // ① 立刻關閉視窗、更新畫面，讓使用者知道已送出
+  closeMov('batchConfirmMov');
+  closeMov('batchTakeMov');
+
+  // ② 先在本地更新庫存，畫面立即反應
+  const allEntries = entries.map(e=>{
+    const it=items.find(i=>i.id===e.id);
+    const before=it.stock; it.stock-=e.qty;
+    const entry={time:now.toISOString(),timeDisplay:td,staff:batchTakeSelStaff,
+      itemZh:it.zh,itemEn:it.en,emoji:it.emoji||'📦',photo:it.photo||'',
+      action:'take',qty:e.qty,note:note||'批次領取',stockBefore:before,stockAfter:it.stock};
+    logs.unshift({...entry,time:now});
+    return {e, it, entry};
+  });
+  renderStaffGrid();renderAdminTbl();renderStats();renderLog();
+
+  // ③ 顯示明細單（含領用數、剩餘庫存、警示）
+  const rows=allEntries.map(({e,it})=>{
+    const isLow = it.stock <= it.min;
+    const isOut = it.stock === 0;
+    const warn = isOut
+      ? `<span style="color:var(--danger);font-weight:700;font-size:11px">⚠️ 已缺貨 需訂購！</span>`
+      : isLow
+      ? `<span style="color:var(--danger);font-weight:700;font-size:11px">⚠️ 庫存偏低 需訂購</span>`
+      : '';
+    return`<div style="padding:9px 4px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${warn?'5px':'0'}">
+        <span style="font-size:13px;font-weight:600">${it.photo?`<img src="${it.photo}" style="width:22px;height:22px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:4px">`:it.emoji||'📦'} ${it.zh}</span>
+        <div style="display:flex;gap:10px;align-items:center;flex-shrink:0">
+          <div style="text-align:center">
+            <div style="font-size:10px;color:var(--sub)">領用</div>
+            <div style="font-size:15px;font-weight:700;color:var(--warning)">−${e.qty}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:var(--sub)">剩餘</div>
+            <div style="font-size:15px;font-weight:700;color:${isOut?'var(--danger)':isLow?'var(--danger)':'var(--success)'}">${it.stock}</div>
+          </div>
+        </div>
+      </div>
+      ${warn?`<div style="text-align:right">${warn}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const hasWarn = allEntries.some(({it})=>it.stock<=it.min);
+  document.getElementById('receiptContent').innerHTML=`
+    <div class="receipt-card">
+      <div class="receipt-title">📤📤 批次領取明細</div>
+      <div class="rrow"><span class="rk">操作員</span><span class="rv">${batchTakeSelStaff}</span></div>
+      <div class="rrow"><span class="rk">時間</span><span class="rv">${td}</span></div>
+      ${note?`<div class="rrow"><span class="rk">備注</span><span class="rv">${note}</span></div>`:''}
+      <div style="margin-top:10px">${rows}</div>
+      ${hasWarn?`<div style="margin-top:10px;background:var(--danger-light);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--danger);font-weight:600">⚠️ 部分品項庫存偏低或已缺貨，請盡快訂購</div>`:''}
+    </div>`;
+  openMov('receiptMov');
+
+  // ④ 背景同步到 Google Sheets（不阻擋畫面）
+  setSync('sy');
+  let errCount=0;
+  for(const {e, it, entry} of allEntries){
+    try{
+      if(SCRIPT_URL) await apiPost({action:'takeItem',id:it.id,stock:it.stock,log:entry});
+    }catch(err){ errCount++; }
+  }
+  if(errCount>0){
+    setSync('er');
+    toast(`⚠️ ${errCount} 項同步失敗，請重新整理確認`,'er');
+  } else {
+    setSync('ok');
+  }
+}
+
+function openChangeUrl(){
+  const bar=document.getElementById('currentUrlBar');
+  if(SCRIPT_URL){
+    if(bar){ bar.style.display='block'; document.getElementById('currentUrlText').textContent=SCRIPT_URL; }
+  } else {
+    if(bar) bar.style.display='none';
+  }
+  document.getElementById('scriptUrl').value='';
+  document.getElementById('setupMovTitle').textContent='更換連接網址';
+  openMov('setupMov');
+}
+function openSetupModal(){
+  const bar=document.getElementById('currentUrlBar');
+  if(bar) bar.style.display='none';
+  document.getElementById('scriptUrl').value='';
+  document.getElementById('setupMovTitle').textContent='設定 Google Sheets 網址';
+  openMov('setupMov');
+}
+
+// ════════════════════════════════════════════════
+//  明細單關閉 — 確保同步完成
+// ════════════════════════════════════════════════
+function closeReceipt(){
+  const dot = document.getElementById('sdot');
+  const isSyncing = dot && dot.classList.contains('sy');
+  if(isSyncing){
+    // 同步中，提示等待
+    const btn = document.querySelector('#receiptMov .btn-primary');
+    if(btn){
+      btn.textContent = '⏳ 同步中，請稍候...';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+    }
+    // 每 500ms 檢查一次，完成後自動關閉
+    const check = setInterval(()=>{
+      const d = document.getElementById('sdot');
+      if(!d || !d.classList.contains('sy')){
+        clearInterval(check);
+        closeMov('receiptMov');
+      }
+    }, 500);
+    // 最多等 15 秒後強制關閉
+    setTimeout(()=>{ clearInterval(check); closeMov('receiptMov'); }, 15000);
+  } else {
+    closeMov('receiptMov');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  多語言系統 / Multilingual
+// ════════════════════════════════════════════════
+const LANGS = {
+  zh: {
+    'sys-title':     '倉庫資材庫存系統',
+    'sys-sub':       'Warehouse Inventory Management',
+    'tab-staff':     '👷 操作員',
+    'tab-admin':     '📊 行政核對',
+    'welcome-title': '歡迎！請選擇操作',
+    'welcome-sub':   '點選下方按鈕開始領取資材',
+    'btn-take':      '領取資材',
+    'btn-batch':     '批次領取',
+    'btn-return':    '歸還資材',
+    'btn-history':   '查看記錄',
+    'all-items':     '所有資材',
+    'search-ph':     '搜尋資材 / Search items...',
+    'modal-take':    '領取資材',
+    'modal-return':  '歸還資材',
+    'modal-staff':   '👤 操作員',
+    'modal-item':    '📦 選擇品項',
+    'modal-qty':     '數量',
+    'modal-note':    '備注（選填）',
+    'btn-cancel':    '取消',
+    'btn-ok-take':   '✅ 確認領取',
+    'btn-ok-return': '✅ 確認歸還',
+    'confirm-title': '確認領取明細',
+    'confirm-sub':   '請確認品項與數量，如有錯誤請返回修改',
+    'btn-back':      '返回修改',
+    'btn-submit':    '確認送出',
+    'history-title': '我的操作記錄',
+    'history-sub':   '請選擇姓名查詢',
+    'history-sel':   '選擇人員',
+    'done-title':    '操作完成',
+    'btn-done':      '✅ 完成',
+    'logout':        '登出',
+  },
+  en: {
+    'sys-title':     'Warehouse Inventory System',
+    'sys-sub':       'Warehouse Inventory Management',
+    'tab-staff':     '👷 Staff',
+    'tab-admin':     '📊 Admin',
+    'welcome-title': 'Welcome! Select an action',
+    'welcome-sub':   'Tap below to take or return materials',
+    'btn-take':      'Take',
+    'btn-batch':     'Batch Take',
+    'btn-return':    'Return',
+    'btn-history':   'History',
+    'all-items':     'All Items',
+    'search-ph':     'Search items...',
+    'modal-take':    'Take Materials',
+    'modal-return':  'Return Materials',
+    'modal-staff':   '👤 Staff',
+    'modal-item':    '📦 Select Item',
+    'modal-qty':     'Quantity',
+    'modal-note':    'Note (optional)',
+    'btn-cancel':    'Cancel',
+    'btn-ok-take':   '✅ Confirm Take',
+    'btn-ok-return': '✅ Confirm Return',
+    'confirm-title': 'Review Order',
+    'confirm-sub':   'Please check items and quantities before submitting',
+    'btn-back':      '← Go Back',
+    'btn-submit':    'Submit',
+    'history-title': 'My History',
+    'history-sub':   'Select your name to view records',
+    'history-sel':   'Select Staff',
+    'done-title':    'Done!',
+    'btn-done':      '✅ Close',
+    'logout':        'Logout',
+  },
+  vi: {
+    'sys-title':     'Hệ Thống Kho Vật Tư',
+    'sys-sub':       'Quản lý hàng tồn kho',
+    'tab-staff':     '👷 Nhân viên',
+    'tab-admin':     '📊 Quản lý',
+    'welcome-title': 'Chào mừng! Chọn thao tác',
+    'welcome-sub':   'Nhấn nút bên dưới để lấy hoặc trả vật tư',
+    'btn-take':      'Lấy hàng',
+    'btn-batch':     'Lấy nhiều',
+    'btn-return':    'Trả hàng',
+    'btn-history':   'Lịch sử',
+    'all-items':     'Tất cả hàng hóa',
+    'search-ph':     'Tìm kiếm hàng hóa...',
+    'modal-take':    'Lấy vật tư',
+    'modal-return':  'Trả vật tư',
+    'modal-staff':   '👤 Nhân viên',
+    'modal-item':    '📦 Chọn mặt hàng',
+    'modal-qty':     'Số lượng',
+    'modal-note':    'Ghi chú (tùy chọn)',
+    'btn-cancel':    'Hủy',
+    'btn-ok-take':   '✅ Xác nhận lấy',
+    'btn-ok-return': '✅ Xác nhận trả',
+    'confirm-title': 'Xác nhận đơn hàng',
+    'confirm-sub':   'Kiểm tra lại trước khi gửi',
+    'btn-back':      '← Quay lại',
+    'btn-submit':    'Gửi đi',
+    'history-title': 'Lịch sử của tôi',
+    'history-sub':   'Chọn tên để xem lịch sử',
+    'history-sel':   'Chọn nhân viên',
+    'done-title':    'Hoàn thành!',
+    'btn-done':      '✅ Đóng',
+    'logout':        'Đăng xuất',
+  }
+};
+
+let currentLang = localStorage.getItem('wh-lang') || 'zh';
+
+function setLang(lang){
+  currentLang = lang;
+  localStorage.setItem('wh-lang', lang);
+  applyLang();
+}
+
+function t(key){ return (LANGS[currentLang]||LANGS.zh)[key] || (LANGS.zh[key]) || key; }
+
+function applyLang(){
+  const L = currentLang;
+  // Header lang buttons
+  ['zh','en','vi'].forEach(l=>{
+    const btn=document.getElementById('lang-'+l);
+    if(!btn) return;
+    btn.style.background = l===L ? 'rgba(255,255,255,.9)' : 'transparent';
+    btn.style.color = l===L ? '#1a56db' : 'rgba(255,255,255,.8)';
+  });
+  // System title
+  const st=document.querySelector('.htitle'); if(st) st.textContent=t('sys-title');
+  // Tabs
+  const tStaff=document.getElementById('tab-staff'); if(tStaff) tStaff.innerHTML=t('tab-staff')+' <span id="lockIco">🔒</span>';
+  const tAdmin=document.getElementById('tab-admin'); if(tAdmin) tAdmin.textContent=t('tab-admin');
+  // Welcome
+  const wt=document.querySelector('.wtxt h2'); if(wt) wt.textContent=t('welcome-title');
+  const ws=document.querySelector('.wtxt p'); if(ws) ws.textContent=t('welcome-sub');
+  // Action cards
+  const cards = document.querySelectorAll('.ac-zh');
+  const cardKeys = ['btn-take','btn-batch','btn-history'];
+  cards.forEach((c,i)=>{ if(cardKeys[i]) c.textContent=t(cardKeys[i]); });
+  // All items section
+  const ai=document.querySelector('.sc-hdr h3'); if(ai) ai.textContent=t('all-items');
+  // Search placeholder
+  const sp=document.getElementById('staffSearch'); if(sp) sp.placeholder=t('search-ph');
+  // Action modal labels
+  const aml=document.querySelector('#actionMov .ml'); if(aml) aml.innerHTML=t('modal-staff')+' <span class="req">*</span>';
+  // Confirm modal
+  const ct=document.getElementById('t-confirm-title'); if(ct) ct.textContent=t('confirm-title');
+  const cs=document.getElementById('t-confirm-sub'); if(cs) cs.textContent=t('confirm-sub');
+  const bb=document.getElementById('t-btn-back'); if(bb) bb.textContent=t('btn-back');
+  const bs=document.getElementById('t-btn-submit'); if(bs) bs.textContent=t('btn-submit');
+  // History modal
+  const ht=document.querySelector('#histMov h2'); if(ht) ht.textContent=t('history-title');
+  // Done modal
+  const dt=document.querySelector('#receiptMov h2'); if(dt) dt.textContent=t('done-title');
+  // Logout button
+  const lo=document.getElementById('loutBtn'); if(lo) lo.textContent=t('logout');
+  // Note placeholder
+  const np=document.getElementById('mNote'); if(np) np.placeholder=t('modal-note');
+  const bnp=document.getElementById('batchTakeNote'); if(bnp) bnp.placeholder=t('modal-note');
+}
+
+// 初始化語言
+applyLang();
+
+</script>
+</body>
+</html>
